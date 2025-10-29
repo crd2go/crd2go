@@ -57,7 +57,7 @@ func SafeAt(allowedBase, filename string) (string, error) {
 	}
 	cleanPath := filepath.Clean(absPath)
 	if !strings.HasPrefix(cleanPath, absAllowedBase) {
-		return "", fmt.Errorf("Unsafe input path %q not in %q (clean path %q)", filename, allowedBase, cleanPath)
+		return "", fmt.Errorf("unsafe input path %q not in %q (clean path %q)", filename, allowedBase, cleanPath)
 	}
 	return cleanPath, nil
 }

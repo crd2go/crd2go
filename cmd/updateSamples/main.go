@@ -45,7 +45,7 @@ func updateSamples() error {
 		return fmt.Errorf("CRD generation failed: %w", err)
 	}
 	if err := generateSamples(); err != nil {
-		return fmt.Errorf("Samples generation failed: %w", err)
+		return fmt.Errorf("samples generation failed: %w", err)
 	}
 	return nil
 }
