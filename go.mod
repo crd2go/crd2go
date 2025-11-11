@@ -1,10 +1,11 @@
-module github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go
+module github.com/crd2go/crd2go
 
 go 1.25.1
 
 require (
 	github.com/dave/jennifer v1.7.1
 	github.com/magefile/mage v1.15.0
+	github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go v0.0.0-20251111135308-ace4680ec300
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/text v0.29.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -108,6 +109,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-licenses/v2 v2.0.1 // indirect
 	github.com/google/licenseclassifier/v2 v2.0.0 // indirect
+	github.com/google/pprof v0.0.0-20250820193118-f64d9cf942d6 // indirect
 	github.com/gordonklaus/ineffassign v0.2.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.5.0 // indirect
@@ -158,8 +160,6 @@ require (
 	github.com/nishanths/exhaustive v0.12.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.21.0 // indirect
-	github.com/onsi/ginkgo/v2 v2.25.1 // indirect
-	github.com/onsi/gomega v1.38.1 // indirect
 	github.com/otiai10/copy v1.14.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
