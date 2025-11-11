@@ -27,13 +27,17 @@ import (
 
 // CI runs all linting and validation checks.
 func CI() {
-	mg.Deps(Build, UnitTests, Addlicense, Checklicense, CheckGCI, Lint, Govulncheck)
+	mg.Deps(Build, CRD2Go, UnitTests, Addlicense, Checklicense, CheckGCI, Lint, Govulncheck)
 	fmt.Println("✅ CI PASSED all checks")
 }
 
-// Build checks all execitable build properly
+// Build checks all executable build properly
 func Build() error {
 	return wrapRun("🛠️  Build", "go", "build", "./...")
+}
+
+func CRD2Go() error {
+	return wrapRun("🛠️  Build CRD2Go binary", "go", "build", "-o", "crd2go", "./cmd/crd2go/main.go")
 }
 
 // UnitTests runs the go tests
