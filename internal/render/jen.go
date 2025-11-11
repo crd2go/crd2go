@@ -25,8 +25,8 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/checkerr"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/checkerr"
+	"github.com/crd2go/crd2go/internal/gotype"
 )
 
 const (

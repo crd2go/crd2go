@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/crd"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/crd"
+	"github.com/crd2go/crd2go/internal/gotype"
 )
 
 func TestDictHookFn(t *testing.T) {

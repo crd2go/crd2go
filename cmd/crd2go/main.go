@@ -21,10 +21,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/checkerr"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/fileinput"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/pkg/config"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/pkg/crd2go"
+	"github.com/crd2go/crd2go/internal/checkerr"
+	"github.com/crd2go/crd2go/internal/fileinput"
+	"github.com/crd2go/crd2go/pkg/config"
+	"github.com/crd2go/crd2go/pkg/crd2go"
 )
 
 func main() {

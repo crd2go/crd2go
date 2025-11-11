@@ -28,11 +28,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/checkerr"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/crd"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/gotype"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/k8s"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/pkg/config"
+	"github.com/crd2go/crd2go/internal/checkerr"
+	"github.com/crd2go/crd2go/internal/crd"
+	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/k8s"
+	"github.com/crd2go/crd2go/pkg/config"
 )
 
 //go:embed samples/*
