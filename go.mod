@@ -1,11 +1,10 @@
 module github.com/crd2go/crd2go
 
-go 1.25.1
+go 1.25.3
 
 require (
 	github.com/dave/jennifer v1.7.1
 	github.com/magefile/mage v1.15.0
-	github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go v0.0.0-20251111135308-ace4680ec300
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/text v0.29.0
 	gopkg.in/yaml.v3 v3.0.1

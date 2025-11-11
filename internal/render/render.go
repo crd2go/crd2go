@@ -16,7 +16,7 @@
 package render
 
 import (
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/gotype"
 )
 
 type CRDRenderRequest struct {

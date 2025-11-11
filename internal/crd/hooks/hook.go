@@ -15,7 +15,7 @@
 
 package hooks
 
-import "github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/crd"
+import "github.com/crd2go/crd2go/internal/crd"
 
 var Hooks = []crd.OpenAPI2GoHook{
 	UnstructuredHookFn,

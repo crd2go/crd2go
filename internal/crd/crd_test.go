@@ -23,11 +23,11 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/crd"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/crd/hooks"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/gotype"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/k8s"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/pkg/config"
+	"github.com/crd2go/crd2go/internal/crd"
+	"github.com/crd2go/crd2go/internal/crd/hooks"
+	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/k8s"
+	"github.com/crd2go/crd2go/pkg/config"
 )
 
 func TestRenameType(t *testing.T) {
@@ -233,11 +233,11 @@ func TestBuildOpenAPIType(t *testing.T) {
 		})),
 		gotype.NewGoField("LocalReference", gotype.AddImportInfo(gotype.NewStruct("LocalReference", []*gotype.GoField{
 			gotype.NewGoField("Name", gotype.NewPrimitive("string", "string")),
-		}), "k8s", "github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/k8s")),
+		}), "k8s", "github.com/crd2go/crd2go/k8s")),
 		gotype.NewGoField("CrossReference", gotype.AddImportInfo(gotype.NewStruct("Reference", []*gotype.GoField{
 			gotype.NewGoField("Name", gotype.NewPrimitive("string", "string")),
 			gotype.NewGoField("Namespace", gotype.NewPrimitive("string", "string")),
-		}), "k8s", "github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/k8s")),
+		}), "k8s", "github.com/crd2go/crd2go/k8s")),
 		gotype.NewGoField("SimpleString", gotype.NewPrimitive("string", "string")),
 		gotype.NewGoField("SimpleNumber", gotype.NewPrimitive("float64", "float64")),
 		gotype.NewGoField("SimpleInteger", gotype.NewPrimitive("int", "int")),

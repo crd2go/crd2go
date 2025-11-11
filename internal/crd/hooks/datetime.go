@@ -18,8 +18,8 @@ package hooks
 import (
 	"fmt"
 
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/crd"
-	"github.com/mongodb/mongodb-atlas-kubernetes/tools/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/crd"
+	"github.com/crd2go/crd2go/internal/gotype"
 )
 
 func DatetimeHookFn(_ *gotype.TypeDict, _ []crd.OpenAPI2GoHook, crdType *crd.CRDType) (*gotype.GoType, error) {
