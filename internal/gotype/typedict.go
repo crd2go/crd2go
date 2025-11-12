@@ -17,6 +17,7 @@ package gotype
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/crd2go/crd2go/pkg/config"
 )
@@ -35,6 +36,20 @@ type Request struct {
 	config.CoreConfig
 	CodeWriterFn config.CodeWriterFunc
 	TypeDict     *TypeDict
+}
+
+// RenderKind returns true if the given kind must be rendered. Which happens
+// when either the Kinds list in config is empty or the kind is contained in it
+func (req *Request) RenderKind(kind string) bool {
+	if len(req.Kinds) == 0 {
+		return true
+	}
+	for _, allowedKind := range req.Kinds {
+		if strings.EqualFold(allowedKind, kind) {
+			return true
+		}
+	}
+	return false
 }
 
 // NewTypeDict creates a new TypeDict with the given renames and Go types

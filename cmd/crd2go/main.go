@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/crd2go/crd2go/internal/checkerr"
 	"github.com/crd2go/crd2go/internal/fileinput"
@@ -28,20 +29,23 @@ import (
 )
 
 func main() {
-	var input, output, config string
+	var input, output, generate, config string
 	flag.StringVar(&input, "input", "", "input YAML to process")
 	flag.StringVar(&output, "output", "", "output directory to produce source code to")
+	flag.StringVar(&generate, "generate", "", "comma separated list o kinds to actually "+
+		"generate code for. Empty, the default value, genrates all Kinds. "+
+		"In any case, all CRDs are processed, unlike with skip.")
 	flag.StringVar(&config, "config", "crd2go.yaml", "YAML file with the CRD2Go config")
 	flag.Parse()
 
-	cfg, err := generate(input, output, config)
+	cfg, err := generateTypes(input, output, config, asList(generate))
 	if err != nil {
 		log.Fatalf("Failed to generate go structs: %v", err)
 	}
 	log.Printf("Code generated at %s", cfg.Output)
 }
 
-func generate(input, output, config string) (*config.Config, error) {
+func generateTypes(input, output, config string, kinds []string) (*config.Config, error) {
 	f, err := os.Open(fileinput.MustBeSafe(config))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open configuration file: %w", err)
@@ -57,8 +61,20 @@ func generate(input, output, config string) (*config.Config, error) {
 	if output != "" {
 		cfg.Output = output
 	}
+	cfg.Kinds = kinds
 	if err := crd2go.GenerateToDir(cfg); err != nil {
 		return nil, fmt.Errorf("failed to generate code: %w", err)
 	}
 	return cfg, nil
+}
+
+func asList(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	results := strings.Split(s, ",")
+	for i, item := range results {
+		results[i] = strings.TrimSpace(item)
+	}
+	return results
 }

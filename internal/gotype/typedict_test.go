@@ -258,3 +258,37 @@ func TestTypeDict_RenameField(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderKind(t *testing.T) {
+	for _, tc := range []struct {
+		title  string
+		kinds  []string
+		target string
+		want   bool
+	}{
+		{
+			title:  "allow all",
+			kinds:  []string{},
+			target: "akind",
+			want:   true,
+		},
+		{
+			title:  "allow akind",
+			kinds:  []string{"akind"},
+			target: "akind",
+			want:   true,
+		},
+		{
+			title:  "skip akind",
+			kinds:  []string{"bkind", "ckind"},
+			target: "akind",
+			want:   false,
+		},
+	} {
+		t.Run(tc.title, func(t *testing.T) {
+			req := Request{}
+			req.Kinds = tc.kinds
+			assert.Equal(t, tc.want, req.RenderKind(tc.target))
+		})
+	}
+}

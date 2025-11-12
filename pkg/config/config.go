@@ -64,6 +64,7 @@ type CoreConfig struct {
 	Renames  map[string]string    `yaml:"renames"`
 	Imports  []ImportedTypeConfig `yaml:"imports"`
 	DeepCopy DeepCopy             `yaml:"deepCopy"`
+	Kinds    []string             `yaml:"-"` // only a CLI arg
 }
 
 type DeepCopy struct {

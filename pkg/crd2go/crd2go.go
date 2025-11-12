@@ -165,6 +165,10 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 			return nil, fmt.Errorf("could not build CRD type: %w", err)
 		}
 
+		if !req.RenderKind(versionedCRD.Kind) {
+			continue
+		}
+
 		renderReq := render.CRDRenderRequest{
 			Request:  *req,
 			Filename: crd.Kind2Filename(versionedCRD.Kind),
