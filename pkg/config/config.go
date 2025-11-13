@@ -58,12 +58,13 @@ type ImportInfo struct {
 
 // CoreConfig holds the subset of the config witout the input and output fields
 type CoreConfig struct {
-	Version  string               `yaml:"version"`
-	Reserved []string             `yaml:"reserved"`
-	SkipList []string             `yaml:"skipList"`
-	Renames  map[string]string    `yaml:"renames"`
-	Imports  []ImportedTypeConfig `yaml:"imports"`
-	DeepCopy DeepCopy             `yaml:"deepCopy"`
+	Version      string               `yaml:"version"`
+	Reserved     []string             `yaml:"reserved"`
+	SkipList     []string             `yaml:"skipList"`
+	Renames      map[string]string    `yaml:"renames"`
+	Imports      []ImportedTypeConfig `yaml:"imports"`
+	DeepCopy     DeepCopy             `yaml:"deepCopy"`
+	GroupVersion string               `yaml:"-"`
 }
 
 type DeepCopy struct {
