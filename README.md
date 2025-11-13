@@ -17,7 +17,7 @@ go tool crd2go -h
 Usage of ./crd2go:
   -config string
     	YAML file with the CRD2Go config (default "crd2go.yaml")
-  -generate string
+  -kinds string
     	comma separated list of kinds to actually generate code for. Empty, the default value, generates all Kinds. In any case, all CRDs are processed, unlike with skip.
   -input string
     	input YAML to process
@@ -27,7 +27,7 @@ Usage of ./crd2go:
 
 Main arguments:
 - **config** is the name of a YAML file containing all tool settings.
-- **generate** allows to select a subset of CRD Kind types to render, even after processing the corresponding CRD to keep the type name ans sharing decisions unchanged. This is a CLI only argument, not present in the config file.
+- **kinds** allows to select a subset of CRD Kind types to render, even after processing the corresponding CRD to keep the type name ans sharing decisions unchanged. This is a CLI only argument, not present in the config file.
 - **input** is the name of a YAML file with one or more CRDs to generate Go code from.
 - **output** is the directory where the Go types for the CRDs should be generated.
 

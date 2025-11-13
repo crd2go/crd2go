@@ -29,16 +29,16 @@ import (
 )
 
 func main() {
-	var input, output, generate, config string
+	var input, output, kinds, config string
 	flag.StringVar(&input, "input", "", "input YAML to process")
 	flag.StringVar(&output, "output", "", "output directory to produce source code to")
-	flag.StringVar(&generate, "generate", "", "comma separated list of kinds to actually "+
+	flag.StringVar(&kinds, "kinds", "", "comma separated list of kinds to actually "+
 		"generate code for. Empty, the default value, generates all Kinds. "+
 		"In any case, all CRDs are processed, unlike with skip.")
 	flag.StringVar(&config, "config", "crd2go.yaml", "YAML file with the CRD2Go config")
 	flag.Parse()
 
-	cfg, err := generateTypes(input, output, config, asList(generate))
+	cfg, err := generateTypes(input, output, config, asList(kinds))
 	if err != nil {
 		log.Fatalf("Failed to generate go structs: %v", err)
 	}
