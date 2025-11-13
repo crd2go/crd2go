@@ -22,8 +22,10 @@ import (
 type CRDRenderRequest struct {
 	gotype.Request
 	Filename string
+	Group    string
 	Version  string
 	Kind     string
+	Resource string
 	Type     *gotype.GoType
 }
 
