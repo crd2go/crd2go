@@ -69,6 +69,34 @@ func TestGenerateFromCRDs(t *testing.T) {
 	}
 }
 
+func TestSelectivelyGenerateFromCRDs(t *testing.T) {
+	buffers := make(map[string]*bytes.Buffer)
+
+	in, err := samples.Open("samples/crds.yaml")
+	require.NoError(t, err)
+	req := gotype.Request{
+		CodeWriterFn: BufferForCRD(buffers),
+		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+		CoreConfig: config.CoreConfig{
+			Version:  crd.FirstVersion,
+			SkipList: disabledKinds,
+			Kinds: []string{
+				"Organization", "Group", "Cluster",
+				"FlexCluster", "GroupAlertsConfig", "ThirdPartyIntegration",
+			},
+		},
+	}
+	require.NoError(t, Generate(&req, in))
+
+	assert.NotEmpty(t, buffers)
+	expectedGenerations := 8 // 6 CRDs and the docs and schame files
+	assert.Len(t, buffers, expectedGenerations)
+	for key, buf := range buffers {
+		want := readTestFile(t, filepath.Join("samples", "v1", key))
+		require.Equal(t, want, buf.String())
+	}
+}
+
 func TestRefs(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 

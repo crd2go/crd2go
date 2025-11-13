@@ -32,9 +32,8 @@ func main() {
 	var input, output, kinds, config string
 	flag.StringVar(&input, "input", "", "input YAML to process")
 	flag.StringVar(&output, "output", "", "output directory to produce source code to")
-	flag.StringVar(&kinds, "kinds", "", "comma separated list of kinds to actually "+
-		"generate code for. Empty, the default value, generates all Kinds. "+
-		"In any case, all CRDs are processed, unlike with skip.")
+	flag.StringVar(&kinds, "kinds", "", "comma separated list of Kinds to consider for generation. "+
+		"If empty, it generates all Kinds.")
 	flag.StringVar(&config, "config", "crd2go.yaml", "YAML file with the CRD2Go config")
 	flag.Parse()
 

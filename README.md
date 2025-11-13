@@ -17,10 +17,10 @@ go tool crd2go -h
 Usage of ./crd2go:
   -config string
     	YAML file with the CRD2Go config (default "crd2go.yaml")
-  -kinds string
-    	comma separated list of kinds to actually generate code for. Empty, the default value, generates all Kinds. In any case, all CRDs are processed, unlike with skip.
   -input string
     	input YAML to process
+  -kinds string
+    	comma separated list of Kinds to consider for generation. If empty, it generates all Kinds.
   -output string
     	output directory to produce source code to
 ```
