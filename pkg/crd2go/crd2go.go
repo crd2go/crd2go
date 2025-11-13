@@ -41,6 +41,18 @@ const (
 	ControllerGenCommand = "controller-gen"
 )
 
+func ParseGroupVersion(gv string) (string, string, error) {
+	if gv == "" {
+		return "", "", nil
+	}
+	parts := strings.Split(gv, "/")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("expected properly formated group version, "+
+			"such as \"gen.example.com/v1\" but got %q", gv)
+	}
+	return parts[0], parts[1], nil
+}
+
 func LoadConfig(r io.Reader) (*config.Config, error) {
 	yml, err := io.ReadAll(r)
 	if err != nil {
@@ -151,8 +163,10 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 
 func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
 	renderRequests := []render.CRDRenderRequest{}
-	group := ""
-	version := ""
+	group, version, err := selectGroupVersion(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse gv: %w", err)
+	}
 	for {
 		crdSchema, err := crd.ParseCRD(scanner)
 		if errors.Is(err, io.EOF) {
@@ -179,13 +193,15 @@ func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]rende
 			return nil, fmt.Errorf("could not build CRD type: %w", err)
 		}
 
-		if version == "" {
-			version = versionedCRD.Version.Name
-		}
-		if group == "" {
-			group = crdSchema.Spec.Group
-		}
+		group, version = autodetectGroupVersion(group, version,
+			crdSchema.Spec.Group, versionedCRD.Version.Name)
 		if version != versionedCRD.Version.Name || group != crdSchema.Spec.Group {
+			if req.GroupVersion != "" {
+				log.Printf("skipping %s of \"%s/%s\", not part of selected Group Version %q",
+					versionedCRD.Kind,
+					versionedCRD.Version.Name, crdSchema.Spec.Group, req.GroupVersion)
+				continue
+			}
 			return nil, fmt.Errorf("YAML input should only contain kinds for %s/%s but got %s/%s",
 				group, version, versionedCRD.Version.Name, crdSchema.Spec.Group)
 		}
@@ -200,6 +216,25 @@ func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]rende
 		}
 		renderRequests = append(renderRequests, renderReq)
 	}
+}
+
+func selectGroupVersion(req *gotype.Request) (string, string, error) {
+	if req.GroupVersion != "" {
+		return ParseGroupVersion(req.GroupVersion)
+	}
+	return "", "", nil
+}
+
+func autodetectGroupVersion(selectedGroup, selectedVersion, crdGroup, crdVersion string) (string, string) {
+	group := selectedGroup
+	version := selectedVersion
+	if group == "" {
+		group = crdGroup
+	}
+	if selectedVersion == "" {
+		version = crdVersion
+	}
+	return group, version
 }
 
 // GenDeepCopyCode will call controller-gen to generate deep copy code

@@ -17,6 +17,8 @@ go tool crd2go -h
 Usage of ./crd2go:
   -config string
     	YAML file with the CRD2Go config (default "crd2go.yaml")
+  -gv string
+    	Group Version (e.g 'gen.example.com/v1') to generate from.
   -input string
     	input YAML to process
   -output string
@@ -25,6 +27,7 @@ Usage of ./crd2go:
 
 Main arguments:
 - **config** is the name of a YAML file containing all tool settings.
+- **gv** is an optional parameter to explicitly select a Group and Version to be generated. When this argument is set, any entres from other group versions will be skipped. When is it not set, the assumption is that all kinds are of the same group version, or the generation fails otherwise.
 - **input** is the name of a YAML file with one or more CRDs to generate Go code from.
 - **output** is the directory where the Go types for the CRDs should be generated.
 

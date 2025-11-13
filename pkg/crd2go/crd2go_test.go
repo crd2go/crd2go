@@ -86,6 +86,29 @@ func TestGenerateFromMixedGroupVersion(t *testing.T) {
 	require.ErrorContains(t, Generate(&req, in), want)
 }
 
+func TestGenerateSelectedGroupVersion(t *testing.T) {
+	buffers := make(map[string]*bytes.Buffer)
+
+	in, err := samples.Open("samples/different-gv.yaml")
+	require.NoError(t, err)
+	req := gotype.Request{
+		CodeWriterFn: BufferForCRD(buffers),
+		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+		CoreConfig: config.CoreConfig{
+			Version:      crd.FirstVersion,
+			SkipList:     disabledKinds,
+			GroupVersion: "ea.generated.mongodb.com/v1",
+		},
+	}
+	require.NoError(t, Generate(&req, in))
+	assert.Len(t, buffers, 3)
+	f, err := samples.Open("samples/resource.go.generated")
+	require.NoError(t, err)
+	want, err := io.ReadAll(f)
+	require.NoError(t, err)
+	assert.Equal(t, string(want), buffers["resource.go"].String())
+}
+
 func TestRefs(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 
