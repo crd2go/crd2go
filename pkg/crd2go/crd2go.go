@@ -96,29 +96,24 @@ func GenerateToDir(cfg *config.Config) error {
 
 // Generate will write files using the CodeWriterFunc
 func Generate(req *gotype.Request, r io.Reader) error {
-	groupsVersions := map[string]struct{}{}
-	group := ""
-	version := ""
 	generatedGVRs, err := GenerateStream(req, r)
 	if err != nil {
 		return fmt.Errorf("failed to generate CRDs: %w", err)
 	}
-	for _, gvr := range generatedGVRs {
-		parts := strings.Split(gvr, "/")
-		if len(parts) > 2 {
-			group = parts[0]
-			version = parts[1]
-			gv := fmt.Sprintf("%s/%s", group, version)
-			groupsVersions[gv] = struct{}{}
-		}
+	if len(generatedGVRs) <= 0 {
+		return nil
 	}
-	if len(groupsVersions) == 1 {
-		if err := render.Default.RenderDoc(req, group, version); err != nil {
-			return fmt.Errorf("failed to generate the doc.go file for group version '%s/%s': %w", group, version, err)
-		}
-		if err := render.Default.RenderSchema(req, group, version); err != nil {
-			return fmt.Errorf("failed to generate the schema.go file for group version '%s/%s': %w", group, version, err)
-		}
+	parts := strings.Split(generatedGVRs[0], "/")
+	if len(parts) <= 2 {
+		return nil
+	}
+	group := parts[0]
+	version := parts[1]
+	if err := render.Default.RenderDoc(req, group, version); err != nil {
+		return fmt.Errorf("failed to generate the doc.go file for group version '%s/%s': %w", group, version, err)
+	}
+	if err := render.Default.RenderSchema(req, group, version); err != nil {
+		return fmt.Errorf("failed to generate the schema.go file for group version '%s/%s': %w", group, version, err)
 	}
 	return nil
 }
@@ -135,17 +130,36 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 	for _, importType := range req.Imports {
 		preloaded = append(preloaded, gotype.NewAutoImportType(&importType))
 	}
-	generatedGVRs := []string{}
-	generated := false
-	scanner := bufio.NewScanner(r)
 	req.TypeDict.AddAll(preloaded...)
+
+	renderRequests, err := computeRenderRequests(req, bufio.NewScanner(r))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate CRDs code generation information: %w", err)
+	}
+
+	generatedGVRs := []string{}
+	for _, renderReq := range renderRequests {
+		if err := render.Default.RenderCRD(&renderReq); err != nil {
+			return nil, fmt.Errorf("failed to generate CRD code: %w", err)
+		}
+		gvr := fmt.Sprintf("%s/%s/%s", renderReq.Group, renderReq.Version, renderReq.Resource)
+		gvr = strings.TrimPrefix(gvr, "/")
+		generatedGVRs = append(generatedGVRs, gvr)
+	}
+	return generatedGVRs, nil
+}
+
+func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
+	renderRequests := []render.CRDRenderRequest{}
+	group := ""
+	version := ""
 	for {
 		crdSchema, err := crd.ParseCRD(scanner)
 		if errors.Is(err, io.EOF) {
-			if generated {
-				return generatedGVRs, nil
+			if len(renderRequests) == 0 {
+				return nil, fmt.Errorf("failed to parse CRD: %w", err)
 			}
-			return nil, fmt.Errorf("failed to parse CRD: %w", err)
+			return renderRequests, nil
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to read input: %w", err)
@@ -165,21 +179,26 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 			return nil, fmt.Errorf("could not build CRD type: %w", err)
 		}
 
+		if version == "" {
+			version = versionedCRD.Version.Name
+		}
+		if group == "" {
+			group = crdSchema.Spec.Group
+		}
+		if version != versionedCRD.Version.Name || group != crdSchema.Spec.Group {
+			return nil, fmt.Errorf("YAML input should only contain kinds for %s/%s but got %s/%s",
+				group, version, versionedCRD.Version.Name, crdSchema.Spec.Group)
+		}
 		renderReq := render.CRDRenderRequest{
 			Request:  *req,
 			Filename: crd.Kind2Filename(versionedCRD.Kind),
+			Group:    crdSchema.Spec.Group,
 			Version:  versionedCRD.Version.Name,
 			Kind:     versionedCRD.Kind,
+			Resource: crdSchema.Spec.Names.Plural,
 			Type:     goCRD,
 		}
-		if err := render.Default.RenderCRD(&renderReq); err != nil {
-			return nil, fmt.Errorf("failed to generate CRD code: %w", err)
-		}
-		generated = true
-		gvr := fmt.Sprintf("%s/%s/%s",
-			crdSchema.Spec.Group, versionedCRD.Version.Name, crdSchema.Spec.Names.Plural)
-		gvr = strings.TrimPrefix(gvr, "/")
-		generatedGVRs = append(generatedGVRs, gvr)
+		renderRequests = append(renderRequests, renderReq)
 	}
 }
 

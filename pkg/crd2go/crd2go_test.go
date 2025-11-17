@@ -69,6 +69,23 @@ func TestGenerateFromCRDs(t *testing.T) {
 	}
 }
 
+func TestGenerateFromMixedGroupVersion(t *testing.T) {
+	buffers := make(map[string]*bytes.Buffer)
+
+	in, err := samples.Open("samples/different-gv.yaml")
+	require.NoError(t, err)
+	req := gotype.Request{
+		CodeWriterFn: BufferForCRD(buffers),
+		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+		CoreConfig: config.CoreConfig{
+			Version:  crd.FirstVersion,
+			SkipList: disabledKinds,
+		},
+	}
+	want := "YAML input should only contain kinds for atlas.generated.mongodb.com/v2"
+	require.ErrorContains(t, Generate(&req, in), want)
+}
+
 func TestRefs(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 
