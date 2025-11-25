@@ -58,7 +58,7 @@ func Addlicense() error {
 		"-ignore", "**/*.yml",
 		"-ignore", "**/*.nix",
 		"-ignore", ".devbox/**",
-		"-ignore", "internal/samples/**",
+		"-ignore", "internal/testdata/**",
 		"-ignore", "magefile.go",
 		".",
 	)
@@ -90,7 +90,7 @@ func GCI() error {
 
 // GitClean check git is clean of changes
 func GitClean() error {
-	if err := sh.Run("git", "diff-index", "--quiet", "HEAD", "--"); err != nil {
+	if err := sh.Run("git", "diff", "--quiet"); err != nil {
 		fmt.Println("❗️ The following files have changes:")
 		sh.RunV("git", "diff-index", "--name-only", "HEAD")
 		return fmt.Errorf("please run 'mage gci' and commit any changes")

@@ -14,10 +14,10 @@
 #
 
 # input CRD schemas in YAML format
-input: ./pkg/crd2go/samples/crds.yaml
+input: ./internal/testdata/crds.yaml
 
 # output directory to generate Go code
-output: ./pkg/crd2go/samples/v1
+output: ./internal/testdata/v1
 
 # list of CRDs to skip by Kind name
 skipList: []
