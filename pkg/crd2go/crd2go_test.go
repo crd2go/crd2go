@@ -17,9 +17,9 @@ package crd2go
 
 import (
 	"bytes"
-	"embed"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -31,12 +31,10 @@ import (
 	"github.com/crd2go/crd2go/internal/checkerr"
 	"github.com/crd2go/crd2go/internal/crd"
 	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/testdata"
 	"github.com/crd2go/crd2go/k8s"
 	"github.com/crd2go/crd2go/pkg/config"
 )
-
-//go:embed samples/*
-var samples embed.FS
 
 const (
 	expectedSources = 19
@@ -49,8 +47,7 @@ var extraReserved = []string{} // use to fix problematic name picks, usually due
 func TestGenerateFromCRDs(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 
-	in, err := samples.Open("samples/crds.yaml")
-	require.NoError(t, err)
+	in := bytes.NewBuffer(testdata.CRDsYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
 		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
@@ -64,7 +61,7 @@ func TestGenerateFromCRDs(t *testing.T) {
 	assert.NotEmpty(t, buffers)
 	assert.Len(t, buffers, expectedSources)
 	for key, buf := range buffers {
-		want := readTestFile(t, filepath.Join("samples", "v1", key))
+		want := readTestFile(t, testdata.V1, filepath.Join("v1", key))
 		require.Equal(t, want, buf.String())
 	}
 }
@@ -72,8 +69,7 @@ func TestGenerateFromCRDs(t *testing.T) {
 func TestGenerateFromMixedGroupVersion(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 
-	in, err := samples.Open("samples/different-gv.yaml")
-	require.NoError(t, err)
+	in := bytes.NewBuffer(testdata.DifferentGVYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
 		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
@@ -112,8 +108,7 @@ func TestGenerateSelectedGroupVersion(t *testing.T) {
 func TestRefs(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 
-	in, err := samples.Open("samples/samplerefs.yaml")
-	require.NoError(t, err)
+	in := bytes.NewBuffer(testdata.SampleRefsYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
 		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
@@ -122,13 +117,13 @@ func TestRefs(t *testing.T) {
 			SkipList: disabledKinds,
 		},
 	}
-	_, err = GenerateStream(&req, in)
+	_, err := GenerateStream(&req, in)
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, buffers)
 	assert.Len(t, buffers, 1)
 	for key, buf := range buffers {
-		want := readTestFile(t, filepath.Join("samples", "refs", "v1", key))
+		want := readTestFile(t, testdata.Refs, filepath.Join("refs", "v1", key))
 		require.Equal(t, want, buf.String())
 	}
 }
@@ -232,9 +227,9 @@ func TestCodeFileForCRDAtPath(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to create file")
 }
 
-func readTestFile(t *testing.T, path string) string {
+func readTestFile(t *testing.T, filesys fs.FS, path string) string {
 	t.Helper()
-	f, err := samples.Open(path)
+	f, err := filesys.Open(path)
 	require.NoError(t, err)
 	defer checkerr.CheckErr("closing test file", f.Close)
 

@@ -18,4 +18,4 @@
 
 package v1
 
-// controller-gen object paths="./internal/crd2go/samples/refs/v1"
+// controller-gen object paths="./internal/testdata/v1"

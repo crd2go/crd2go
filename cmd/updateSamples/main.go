@@ -29,7 +29,7 @@ const (
 
 	OpenAPI2CRDDir = "../openapi2crd"
 
-	samplesDir = "../crd2go/pkg/crd2go/samples/"
+	samplesDir = "../internal/testdata/"
 
 	crdsFile = samplesDir + "crds.yaml"
 )
