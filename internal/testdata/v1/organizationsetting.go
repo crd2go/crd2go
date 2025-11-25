@@ -95,3 +95,11 @@ type OrganizationSettingList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OrganizationSetting `json:"items"`
 }
+
+// GetConditions for OrganizationSetting
+func (os *OrganizationSetting) GetConditions() []metav1.Condition {
+	if os.Status.Conditions == nil {
+		return nil
+	}
+	return *os.Status.Conditions
+}

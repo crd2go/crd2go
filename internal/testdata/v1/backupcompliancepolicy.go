@@ -159,3 +159,11 @@ type BackupCompliancePolicyList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BackupCompliancePolicy `json:"items"`
 }
+
+// GetConditions for BackupCompliancePolicy
+func (bcp *BackupCompliancePolicy) GetConditions() []metav1.Condition {
+	if bcp.Status.Conditions == nil {
+		return nil
+	}
+	return *bcp.Status.Conditions
+}

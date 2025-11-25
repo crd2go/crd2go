@@ -329,3 +329,11 @@ type SearchIndexList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SearchIndex `json:"items"`
 }
+
+// GetConditions for SearchIndex
+func (si *SearchIndex) GetConditions() []metav1.Condition {
+	if si.Status.Conditions == nil {
+		return nil
+	}
+	return *si.Status.Conditions
+}

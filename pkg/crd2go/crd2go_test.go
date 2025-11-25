@@ -54,6 +54,11 @@ func TestGenerateFromCRDs(t *testing.T) {
 		CoreConfig: config.CoreConfig{
 			Version:  crd.FirstVersion,
 			SkipList: disabledKinds,
+			Plugins: []config.Plugin{
+				{
+					Name: "get-conditions",
+				},
+			},
 		},
 	}
 	require.NoError(t, Generate(&req, in))
@@ -85,8 +90,7 @@ func TestGenerateFromMixedGroupVersion(t *testing.T) {
 func TestGenerateSelectedGroupVersion(t *testing.T) {
 	buffers := make(map[string]*bytes.Buffer)
 
-	in, err := samples.Open("samples/different-gv.yaml")
-	require.NoError(t, err)
+	in := bytes.NewBuffer(testdata.DifferentGVYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
 		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
@@ -98,11 +102,8 @@ func TestGenerateSelectedGroupVersion(t *testing.T) {
 	}
 	require.NoError(t, Generate(&req, in))
 	assert.Len(t, buffers, 3)
-	f, err := samples.Open("samples/resource.go.generated")
-	require.NoError(t, err)
-	want, err := io.ReadAll(f)
-	require.NoError(t, err)
-	assert.Equal(t, string(want), buffers["resource.go"].String())
+	want := testdata.ResourceGoGenerated
+	assert.Equal(t, want, buffers["resource.go"].String())
 }
 
 func TestRefs(t *testing.T) {

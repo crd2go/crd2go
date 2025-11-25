@@ -401,3 +401,11 @@ type GroupAlertsConfigList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []GroupAlertsConfig `json:"items"`
 }
+
+// GetConditions for GroupAlertsConfig
+func (gac *GroupAlertsConfig) GetConditions() []metav1.Condition {
+	if gac.Status.Conditions == nil {
+		return nil
+	}
+	return *gac.Status.Conditions
+}

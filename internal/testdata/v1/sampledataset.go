@@ -90,3 +90,11 @@ type SampleDatasetList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SampleDataset `json:"items"`
 }
+
+// GetConditions for SampleDataset
+func (sd *SampleDataset) GetConditions() []metav1.Condition {
+	if sd.Status.Conditions == nil {
+		return nil
+	}
+	return *sd.Status.Conditions
+}

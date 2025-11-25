@@ -168,3 +168,11 @@ type FlexClusterList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []FlexCluster `json:"items"`
 }
+
+// GetConditions for FlexCluster
+func (fc *FlexCluster) GetConditions() []metav1.Condition {
+	if fc.Status.Conditions == nil {
+		return nil
+	}
+	return *fc.Status.Conditions
+}

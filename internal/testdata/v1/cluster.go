@@ -714,3 +714,11 @@ type ClusterList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Cluster `json:"items"`
 }
+
+// GetConditions for Cluster
+func (c *Cluster) GetConditions() []metav1.Condition {
+	if c.Status.Conditions == nil {
+		return nil
+	}
+	return *c.Status.Conditions
+}

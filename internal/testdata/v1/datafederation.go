@@ -369,3 +369,11 @@ type DataFederationList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DataFederation `json:"items"`
 }
+
+// GetConditions for DataFederation
+func (df *DataFederation) GetConditions() []metav1.Condition {
+	if df.Status.Conditions == nil {
+		return nil
+	}
+	return *df.Status.Conditions
+}

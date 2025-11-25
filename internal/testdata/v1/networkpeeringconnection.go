@@ -150,3 +150,11 @@ type NetworkPeeringConnectionList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NetworkPeeringConnection `json:"items"`
 }
+
+// GetConditions for NetworkPeeringConnection
+func (npc *NetworkPeeringConnection) GetConditions() []metav1.Condition {
+	if npc.Status.Conditions == nil {
+		return nil
+	}
+	return *npc.Status.Conditions
+}

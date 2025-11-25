@@ -27,6 +27,7 @@ import (
 
 	"github.com/crd2go/crd2go/internal/checkerr"
 	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/plugins"
 )
 
 const (
@@ -64,6 +65,9 @@ func (jr JenRenderer) RenderCRD(req *CRDRenderRequest) error {
 		return fmt.Errorf("failed to generate CRD type for %q: %w", req.Kind, err)
 	}
 	renderCRDListObject(f, req.Kind)
+	if err := renderCodegenPlugins(f, req); err != nil {
+		return fmt.Errorf("failed to render plugins: %w", err)
+	}
 
 	w, err := req.CodeWriterFn(req.Filename, true)
 	if err != nil {
@@ -107,6 +111,24 @@ func renderCRDListObject(f *jen.File, kind string) {
 		jen.Qual(metav1Package, "ListMeta").Tag(map[string]string{"json": "metadata,omitempty"}),
 		jen.Id("Items").Index().Id(kind).Tag(map[string]string{"json": "items"}),
 	)
+}
+
+// renderCodegenPlugins appends code generation from optional plugins per CRD
+func renderCodegenPlugins(f *jen.File, req *CRDRenderRequest) error {
+	codeGenPlugins, err := plugins.CodegenPlugins(req.Plugins)
+	if err != nil {
+		return fmt.Errorf("failed to enumerate codegen plugins: %w", err)
+	}
+	pluginRequest := plugins.CodegenRequest{
+		File: f,
+		Type: req.Type,
+	}
+	for _, plugin := range codeGenPlugins {
+		if err := plugin.Process(&pluginRequest); err != nil {
+			return fmt.Errorf("failed to process plugin %q: %w", plugin.Name(), err)
+		}
+	}
+	return nil
 }
 
 func renderDocFile(req *gotype.Request, group, version string) error {
