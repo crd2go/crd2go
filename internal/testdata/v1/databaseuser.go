@@ -164,3 +164,11 @@ type DatabaseUserList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DatabaseUser `json:"items"`
 }
+
+// GetConditions for DatabaseUser
+func (du *DatabaseUser) GetConditions() []metav1.Condition {
+	if du.Status.Conditions == nil {
+		return nil
+	}
+	return *du.Status.Conditions
+}

@@ -197,3 +197,11 @@ type BackupScheduleList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []BackupSchedule `json:"items"`
 }
+
+// GetConditions for BackupSchedule
+func (bs *BackupSchedule) GetConditions() []metav1.Condition {
+	if bs.Status.Conditions == nil {
+		return nil
+	}
+	return *bs.Status.Conditions
+}

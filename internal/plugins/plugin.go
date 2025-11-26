@@ -1,0 +1,55 @@
+// Copyright 2025 MongoDB Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package plugins
+
+import (
+	"fmt"
+
+	"github.com/dave/jennifer/jen"
+
+	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/pkg/config"
+)
+
+type CodegenRequest struct {
+	Type *gotype.GoType
+	File *jen.File
+}
+
+type Plugin interface {
+	Name() string
+	Process(cgr *CodegenRequest) error
+}
+
+type PluginBuilderFunc func(config.Plugin) Plugin
+
+var codegenPlugins = map[string]PluginBuilderFunc{
+	GetConditionsPlugin: func(config.Plugin) Plugin {
+		return &GetConditions{}
+	},
+}
+
+func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {
+	plugins := []Plugin{}
+	for _, cfg := range configs {
+		builder, ok := codegenPlugins[cfg.Name]
+		if !ok {
+			return nil, fmt.Errorf("%q is not a registered plugin", cfg.Name)
+		}
+		plugin := builder(cfg)
+		plugins = append(plugins, plugin)
+	}
+	return plugins, nil
+}

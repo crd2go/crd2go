@@ -63,8 +63,14 @@ type CoreConfig struct {
 	SkipList     []string             `yaml:"skipList"`
 	Renames      map[string]string    `yaml:"renames"`
 	Imports      []ImportedTypeConfig `yaml:"imports"`
+	Plugins      []Plugin             `yaml:"plugins"`
 	DeepCopy     DeepCopy             `yaml:"deepCopy"`
 	GroupVersion string               `yaml:"-"`
+}
+
+// Plugin represents a named plugin code that can be optionally invoked
+type Plugin struct {
+	Name string `yaml:"name"`
 }
 
 type DeepCopy struct {

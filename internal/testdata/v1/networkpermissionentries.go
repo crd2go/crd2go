@@ -108,3 +108,11 @@ type NetworkPermissionEntriesList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NetworkPermissionEntries `json:"items"`
 }
+
+// GetConditions for NetworkPermissionEntries
+func (npe *NetworkPermissionEntries) GetConditions() []metav1.Condition {
+	if npe.Status.Conditions == nil {
+		return nil
+	}
+	return *npe.Status.Conditions
+}

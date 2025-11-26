@@ -111,3 +111,11 @@ type CustomRoleList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CustomRole `json:"items"`
 }
+
+// GetConditions for CustomRole
+func (cr *CustomRole) GetConditions() []metav1.Condition {
+	if cr.Status.Conditions == nil {
+		return nil
+	}
+	return *cr.Status.Conditions
+}

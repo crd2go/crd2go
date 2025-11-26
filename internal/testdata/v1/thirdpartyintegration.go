@@ -267,3 +267,11 @@ type ThirdPartyIntegrationList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ThirdPartyIntegration `json:"items"`
 }
+
+// GetConditions for ThirdPartyIntegration
+func (tpi *ThirdPartyIntegration) GetConditions() []metav1.Condition {
+	if tpi.Status.Conditions == nil {
+		return nil
+	}
+	return *tpi.Status.Conditions
+}

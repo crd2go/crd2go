@@ -68,3 +68,11 @@ type TeamList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Team `json:"items"`
 }
+
+// GetConditions for Team
+func (t *Team) GetConditions() []metav1.Condition {
+	if t.Status.Conditions == nil {
+		return nil
+	}
+	return *t.Status.Conditions
+}

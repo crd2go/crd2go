@@ -54,6 +54,11 @@ func TestGenerateFromCRDs(t *testing.T) {
 		CoreConfig: config.CoreConfig{
 			Version:  crd.FirstVersion,
 			SkipList: disabledKinds,
+			Plugins: []config.Plugin{
+				{
+					Name: "get-conditions",
+				},
+			},
 		},
 	}
 	require.NoError(t, Generate(&req, in))
