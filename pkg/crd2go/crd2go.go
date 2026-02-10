@@ -101,7 +101,14 @@ func GenerateToDir(cfg *config.Config) error {
 		return fmt.Errorf("failed to generate CRD code: %w", err)
 	}
 	if cfg.DeepCopy.Generate != config.GenDeepCopyOff {
-		return GenDeepCopyCode(cfg)
+		if err := GenDeepCopyCode(cfg); err != nil {
+			return err
+		}
+	}
+	if cfg.ApplyConfiguration.Generate != config.GenModeOff {
+		if err := GenApplyConfigCode(cfg); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -256,6 +263,28 @@ func GenDeepCopyCode(cfg *config.Config) error {
 		return fmt.Errorf("failed to generate deep copy code with controller-gen: %w %T", err, err)
 	}
 	log.Printf("generated deep copy code using controller-gen")
+	return nil
+}
+
+// GenApplyConfigCode will call controller-gen to generate apply configuration code
+// In Auto mode controller-gen is only called if the program is in the $PATH
+func GenApplyConfigCode(cfg *config.Config) error {
+	controllerGenCmd := ControllerGenCommand
+	if cfg.ApplyConfiguration.Generate == config.GenModeAuto {
+		programPath, err := exec.LookPath(controllerGenCmd)
+		if err != nil {
+			log.Printf("GenApplyConfig Auto: skipping apply configuration code generation as controller-gen is not in $PATH")
+			return nil
+		}
+		controllerGenCmd = programPath
+	}
+	if cfg.ApplyConfiguration.ControllerGenPath != "" {
+		controllerGenCmd = cfg.ApplyConfiguration.ControllerGenPath
+	}
+	if err := run.Run(controllerGenCmd, "applyconfiguration", fmt.Sprintf("paths=%q", cfg.Output)); err != nil {
+		return fmt.Errorf("failed to generate apply configuration code with controller-gen: %w %T", err, err)
+	}
+	log.Printf("generated apply configuration code using controller-gen")
 	return nil
 }
 

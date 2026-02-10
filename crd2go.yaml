@@ -49,3 +49,12 @@ plugins:
 deepCopy:
   generate: auto
   # controllerGenPath: path/to/controller-gen ## customize as needed
+
+# applyConfiguration controls the integration with controller-gen to generate
+# Server-Side Apply (SSA) typed apply configuration structs.
+# When enabled, crd2go adds +kubebuilder:ac markers to doc.go and a
+# SchemeGroupVersion alias to scheme.go (required by generated code).
+applyConfiguration:
+  generate: off
+  # outputPackage: ../../applyconfiguration ## relative path for generated output
+  # controllerGenPath: path/to/controller-gen ## customize as needed
