@@ -129,6 +129,89 @@ func TestRefs(t *testing.T) {
 	}
 }
 
+func TestGenerateWithApplyConfiguration(t *testing.T) {
+	for _, tc := range []struct {
+		name                   string
+		acConfig               config.ApplyConfiguration
+		wantDocACMarker        bool
+		wantDocOutputPkg       string
+		wantSchemeGroupVersion bool
+	}{
+		{
+			name:                   "AC disabled by default (zero value)",
+			acConfig:               config.ApplyConfiguration{},
+			wantDocACMarker:        false,
+			wantSchemeGroupVersion: false,
+		},
+		{
+			name:                   "AC explicitly off",
+			acConfig:               config.ApplyConfiguration{Generate: config.GenModeOff},
+			wantDocACMarker:        false,
+			wantSchemeGroupVersion: false,
+		},
+		{
+			name:                   "AC auto without output package",
+			acConfig:               config.ApplyConfiguration{Generate: config.GenModeAuto},
+			wantDocACMarker:        true,
+			wantSchemeGroupVersion: true,
+		},
+		{
+			name: "AC forced with output package",
+			acConfig: config.ApplyConfiguration{
+				Generate:      config.GenModeForced,
+				OutputPackage: "../../applyconfiguration",
+			},
+			wantDocACMarker:        true,
+			wantDocOutputPkg:       "../../applyconfiguration",
+			wantSchemeGroupVersion: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			buffers := make(map[string]*bytes.Buffer)
+
+			in := bytes.NewBuffer(testdata.CRDsYAML)
+			req := gotype.Request{
+				CodeWriterFn: BufferForCRD(buffers),
+				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+				CoreConfig: config.CoreConfig{
+					Version:            crd.FirstVersion,
+					SkipList:           disabledKinds,
+					ApplyConfiguration: tc.acConfig,
+				},
+			}
+			require.NoError(t, Generate(&req, in))
+
+			// Check doc.go
+			docBuf, ok := buffers["doc.go"]
+			require.True(t, ok, "doc.go should be generated")
+			docContent := docBuf.String()
+
+			if tc.wantDocACMarker {
+				assert.Contains(t, docContent, "+kubebuilder:ac:generate=true")
+			} else {
+				assert.NotContains(t, docContent, "+kubebuilder:ac:generate=true")
+			}
+
+			if tc.wantDocOutputPkg != "" {
+				assert.Contains(t, docContent, "+kubebuilder:ac:output:package="+tc.wantDocOutputPkg)
+			} else {
+				assert.NotContains(t, docContent, "+kubebuilder:ac:output:package=")
+			}
+
+		// Check groupversion_info.go
+		schemeBuf, ok := buffers["groupversion_info.go"]
+		require.True(t, ok, "groupversion_info.go should be generated")
+		schemeContent := schemeBuf.String()
+
+			if tc.wantSchemeGroupVersion {
+				assert.Contains(t, schemeContent, "SchemeGroupVersion = GroupVersion")
+			} else {
+				assert.NotContains(t, schemeContent, "SchemeGroupVersion")
+			}
+		})
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -172,6 +255,47 @@ imports: []`,
 					SkipList: []string{},
 					Renames:  map[string]string{},
 					Imports:  []config.ImportedTypeConfig{},
+				},
+			},
+		},
+		{
+			name: "applyConfiguration auto with output package",
+			input: `applyConfiguration:
+  generate: auto
+  outputPackage: ../../applyconfiguration`,
+			want: &config.Config{
+				CoreConfig: config.CoreConfig{
+					ApplyConfiguration: config.ApplyConfiguration{
+						Generate:      config.GenModeAuto,
+						OutputPackage: "../../applyconfiguration",
+					},
+				},
+			},
+		},
+		{
+			name: "applyConfiguration forced with controller-gen path",
+			input: `applyConfiguration:
+  generate: forced
+  outputPackage: ./ac
+  controllerGenPath: /usr/local/bin/controller-gen`,
+			want: &config.Config{
+				CoreConfig: config.CoreConfig{
+					ApplyConfiguration: config.ApplyConfiguration{
+						Generate:          config.GenModeForced,
+						OutputPackage:     "./ac",
+						ControllerGenPath: "/usr/local/bin/controller-gen",
+					},
+				},
+			},
+		},
+		{
+			name:  "applyConfiguration off",
+			input: `applyConfiguration: {generate: "off"}`,
+			want: &config.Config{
+				CoreConfig: config.CoreConfig{
+					ApplyConfiguration: config.ApplyConfiguration{
+						Generate: config.GenModeOff,
+					},
 				},
 			},
 		},
