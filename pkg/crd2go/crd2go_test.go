@@ -198,10 +198,10 @@ func TestGenerateWithApplyConfiguration(t *testing.T) {
 				assert.NotContains(t, docContent, "+kubebuilder:ac:output:package=")
 			}
 
-		// Check groupversion_info.go
-		schemeBuf, ok := buffers["groupversion_info.go"]
-		require.True(t, ok, "groupversion_info.go should be generated")
-		schemeContent := schemeBuf.String()
+			// Check groupversion_info.go
+			schemeBuf, ok := buffers["groupversion_info.go"]
+			require.True(t, ok, "groupversion_info.go should be generated")
+			schemeContent := schemeBuf.String()
 
 			if tc.wantSchemeGroupVersion {
 				assert.Contains(t, schemeContent, "SchemeGroupVersion = GroupVersion")

@@ -60,7 +60,8 @@ func (jr JenRenderer) RenderCRD(req *CRDRenderRequest) error {
 	renderCRDFileHeader(f, req.Kind)
 
 	f.Comment("+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object")
-	f.Comment("+kubebuilder:object:root=true").Line()
+	f.Comment("+kubebuilder:object:root=true")
+	f.Comment("+kubebuilder:resource").Line()
 
 	if err := renderGoType(f, req.TypeDict, req.Type); err != nil {
 		return fmt.Errorf("failed to generate CRD type for %q: %w", req.Kind, err)
