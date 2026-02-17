@@ -273,17 +273,15 @@ imports: []`,
 			},
 		},
 		{
-			name: "applyConfiguration forced with controller-gen path",
+			name: "applyConfiguration forced with output package",
 			input: `applyConfiguration:
   generate: forced
-  outputPackage: ./ac
-  controllerGenPath: /usr/local/bin/controller-gen`,
+  outputPackage: ./ac`,
 			want: &config.Config{
 				CoreConfig: config.CoreConfig{
 					ApplyConfiguration: config.ApplyConfiguration{
-						Generate:          config.GenModeForced,
-						OutputPackage:     "./ac",
-						ControllerGenPath: "/usr/local/bin/controller-gen",
+						Generate:      config.GenModeForced,
+						OutputPackage: "./ac",
 					},
 				},
 			},

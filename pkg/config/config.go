@@ -89,13 +89,11 @@ type Plugin struct {
 }
 
 type DeepCopy struct {
-	Generate          GenDeepCopy `yaml:"generate"`
-	ControllerGenPath string      `yaml:"controllerGenPath"`
+	Generate GenDeepCopy `yaml:"generate"`
 }
 
 // ApplyConfiguration controls how apply configuration generation is handled
 type ApplyConfiguration struct {
-	Generate          GenMode `yaml:"generate"`
-	OutputPackage     string  `yaml:"outputPackage"`
-	ControllerGenPath string  `yaml:"controllerGenPath"`
+	Generate      GenMode `yaml:"generate"`
+	OutputPackage string  `yaml:"outputPackage"`
 }
