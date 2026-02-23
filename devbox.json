@@ -3,7 +3,6 @@
   "packages": [
     "git@latest",
     "go@latest",
-    "vscodium@latest",
     "kubernetes-controller-tools@latest"
   ],
   "shell": {
