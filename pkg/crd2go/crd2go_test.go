@@ -129,6 +129,86 @@ func TestRefs(t *testing.T) {
 	}
 }
 
+func boolPtr(b bool) *bool { return &b }
+
+func TestGenerateWithDeepCopy(t *testing.T) {
+	for _, tc := range []struct {
+		name             string
+		dcConfig         config.DeepCopy
+		wantDocDCMarker  bool
+		wantCRDDCMarker  bool
+		wantControllerGe bool
+	}{
+		{
+			name:             "DC enabled by default (nil)",
+			dcConfig:         config.DeepCopy{},
+			wantDocDCMarker:  true,
+			wantCRDDCMarker:  true,
+			wantControllerGe: true,
+		},
+		{
+			name:             "DC explicitly true",
+			dcConfig:         config.DeepCopy{Generate: boolPtr(true)},
+			wantDocDCMarker:  true,
+			wantCRDDCMarker:  true,
+			wantControllerGe: true,
+		},
+		{
+			name:             "DC explicitly false",
+			dcConfig:         config.DeepCopy{Generate: boolPtr(false)},
+			wantDocDCMarker:  false,
+			wantCRDDCMarker:  false,
+			wantControllerGe: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			buffers := make(map[string]*bytes.Buffer)
+
+			in := bytes.NewBuffer(testdata.CRDsYAML)
+			req := gotype.Request{
+				CodeWriterFn: BufferForCRD(buffers),
+				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+				CoreConfig: config.CoreConfig{
+					Version:  crd.FirstVersion,
+					SkipList: disabledKinds,
+					DeepCopy: tc.dcConfig,
+				},
+			}
+			require.NoError(t, Generate(&req, in))
+
+			docBuf, ok := buffers["doc.go"]
+			require.True(t, ok, "doc.go should be generated")
+			docContent := docBuf.String()
+
+			if tc.wantDocDCMarker {
+				assert.Contains(t, docContent, "+k8s:deepcopy-gen=package")
+			} else {
+				assert.NotContains(t, docContent, "+k8s:deepcopy-gen=package")
+			}
+
+			if tc.wantControllerGe {
+				assert.Contains(t, docContent, "controller-gen object paths=")
+			} else {
+				assert.NotContains(t, docContent, "controller-gen object paths=")
+			}
+
+			// Check a CRD file for the per-type deepcopy marker
+			for name, buf := range buffers {
+				if name == "doc.go" || name == "groupversion_info.go" {
+					continue
+				}
+				content := buf.String()
+				if tc.wantCRDDCMarker {
+					assert.Contains(t, content, "+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object", "expected deepcopy marker in %s", name)
+				} else {
+					assert.NotContains(t, content, "+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object", "unexpected deepcopy marker in %s", name)
+				}
+				break
+			}
+		})
+	}
+}
+
 func TestGenerateWithApplyConfiguration(t *testing.T) {
 	for _, tc := range []struct {
 		name                   string
@@ -144,21 +224,15 @@ func TestGenerateWithApplyConfiguration(t *testing.T) {
 			wantSchemeGroupVersion: false,
 		},
 		{
-			name:                   "AC explicitly off",
-			acConfig:               config.ApplyConfiguration{Generate: config.GenModeOff},
-			wantDocACMarker:        false,
-			wantSchemeGroupVersion: false,
-		},
-		{
-			name:                   "AC auto without output package",
-			acConfig:               config.ApplyConfiguration{Generate: config.GenModeAuto},
+			name:                   "AC enabled without output package",
+			acConfig:               config.ApplyConfiguration{Generate: true},
 			wantDocACMarker:        true,
 			wantSchemeGroupVersion: true,
 		},
 		{
-			name: "AC forced with output package",
+			name: "AC enabled with output package",
 			acConfig: config.ApplyConfiguration{
-				Generate:      config.GenModeForced,
+				Generate:      true,
 				OutputPackage: "../../applyconfiguration",
 			},
 			wantDocACMarker:        true,
@@ -259,42 +333,48 @@ imports: []`,
 			},
 		},
 		{
-			name: "applyConfiguration auto with output package",
+			name: "applyConfiguration enabled with output package",
 			input: `applyConfiguration:
-  generate: auto
+  generate: true
   outputPackage: ../../applyconfiguration`,
 			want: &config.Config{
 				CoreConfig: config.CoreConfig{
 					ApplyConfiguration: config.ApplyConfiguration{
-						Generate:      config.GenModeAuto,
+						Generate:      true,
 						OutputPackage: "../../applyconfiguration",
 					},
 				},
 			},
 		},
 		{
-			name: "applyConfiguration forced with controller-gen path",
-			input: `applyConfiguration:
-  generate: forced
-  outputPackage: ./ac
-  controllerGenPath: /usr/local/bin/controller-gen`,
+			name:  "deepCopy false",
+			input: `deepCopy: {generate: false}`,
 			want: &config.Config{
 				CoreConfig: config.CoreConfig{
-					ApplyConfiguration: config.ApplyConfiguration{
-						Generate:          config.GenModeForced,
-						OutputPackage:     "./ac",
-						ControllerGenPath: "/usr/local/bin/controller-gen",
+					DeepCopy: config.DeepCopy{
+						Generate: boolPtr(false),
 					},
 				},
 			},
 		},
 		{
-			name:  "applyConfiguration off",
-			input: `applyConfiguration: {generate: "off"}`,
+			name:  "deepCopy true",
+			input: `deepCopy: {generate: true}`,
+			want: &config.Config{
+				CoreConfig: config.CoreConfig{
+					DeepCopy: config.DeepCopy{
+						Generate: boolPtr(true),
+					},
+				},
+			},
+		},
+		{
+			name:  "applyConfiguration disabled",
+			input: `applyConfiguration: {generate: false}`,
 			want: &config.Config{
 				CoreConfig: config.CoreConfig{
 					ApplyConfiguration: config.ApplyConfiguration{
-						Generate: config.GenModeOff,
+						Generate: false,
 					},
 				},
 			},

@@ -45,16 +45,17 @@ imports:
 plugins:
   - name: get-conditions
 
-# deepCopy controls the integration with controller-gen to generate deep copy code
+# deepCopy controls whether +k8s:deepcopy-gen markers are emitted in the
+# generated code. Defaults to enabled (markers are emitted).
+# The caller is responsible for running controller-gen separately to produce
+# the actual deepcopy code.
 deepCopy:
-  generate: auto
-  # controllerGenPath: path/to/controller-gen ## customize as needed
+  generate: true
 
-# applyConfiguration controls the integration with controller-gen to generate
-# Server-Side Apply (SSA) typed apply configuration structs.
-# When enabled, crd2go adds +kubebuilder:ac markers to doc.go and a
-# SchemeGroupVersion alias to scheme.go (required by generated code).
+# applyConfiguration controls whether +kubebuilder:ac markers and the
+# SchemeGroupVersion alias are emitted in the generated code.
+# The caller is responsible for running controller-gen separately to produce
+# the actual apply configuration code.
 applyConfiguration:
-  generate: off
+  generate: false
   # outputPackage: ../../applyconfiguration ## relative path for generated output
-  # controllerGenPath: path/to/controller-gen ## customize as needed

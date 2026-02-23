@@ -42,6 +42,29 @@ Extra configuration settings:
 - *reserved* is an array of type names that are not to be used in code generation.
 - *renames* are key - value pairs that specify how each key typename should be renamed to the given value when generated.
 - *imports* associate a type name with an import path and alias, so that an existing Go type is used instead of further expanding a CRD defined type in the generated code.
-- *deepCopy* controls how deep copy generation is handled:
-  - *deepCopy.generate* specifies whether or not to attempt to run `controller-gen` for deep copy generation. It defaults to `auto`, meaning try to run `controller-gen` when available in the PATH.
-  - *deepCopy.controllerGenPath* can be used to give a custom path to the `controller-gen` binary.
+- *deepCopy* controls whether `+k8s:deepcopy-gen` markers are emitted in the generated code:
+  - *deepCopy.generate* (`true`/`false`, defaults to `true`). Set to `false` to omit deepcopy markers from `doc.go` and per-CRD type files.
+- *applyConfiguration* controls whether `+kubebuilder:ac` markers and the `SchemeGroupVersion` alias are emitted in the generated code:
+  - *applyConfiguration.generate* (`true`/`false`, defaults to `false`). When `true`, crd2go adds `+kubebuilder:ac:generate=true` to `doc.go` and a `SchemeGroupVersion` alias to `groupversion_info.go`.
+  - *applyConfiguration.outputPackage* sets the `+kubebuilder:ac:output:package` marker value.
+
+### Running controller-gen
+
+crd2go generates Go types, `doc.go` (with `+k8s:deepcopy-gen` and optional `+kubebuilder:ac` markers), and `groupversion_info.go`. It does **not** invoke `controller-gen` itself. After running crd2go, call `controller-gen` separately to generate deepcopy and (optionally) apply configuration code:
+
+```shell
+# Generate deepcopy methods
+controller-gen object paths=./path/to/generated/types
+
+# Generate apply configuration structs (if applyConfiguration is enabled)
+controller-gen applyconfiguration paths=./path/to/generated/types
+```
+
+This separation lets you control `controller-gen` flags such as `headerFile` for license headers. A typical Makefile target might look like:
+
+```makefile
+generate:
+	go tool crd2go -config crd2go.yaml
+	controller-gen object paths=./api/v1 output:object:dir=./api/v1
+	controller-gen applyconfiguration paths=./api/v1 output:applyconfiguration:dir=./applyconfiguration
+```

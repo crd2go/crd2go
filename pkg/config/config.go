@@ -22,34 +22,6 @@ import (
 // CodeWriterFunc is a function type that takes a CRD and returns a writer for the generated code
 type CodeWriterFunc func(filename string, overwrite bool) (io.WriteCloser, error)
 
-// GenMode controls how optional code generation steps are handled
-type GenMode string
-
-const (
-	// GenModeAuto runs the generator when present in $PATH
-	GenModeAuto GenMode = "auto"
-
-	// GenModeOff will skip the generator
-	GenModeOff GenMode = "off"
-
-	// GenModeForced always runs the generator after CRD code generation
-	GenModeForced GenMode = "forced"
-)
-
-// GenDeepCopy controls how deep copy generation is handled
-type GenDeepCopy = GenMode
-
-const (
-	// GenDeepCopyAuto runs controller-gen when present in $PATH
-	GenDeepCopyAuto = GenModeAuto
-
-	// GenDeepCopyOff will skip controller-gen
-	GenDeepCopyOff = GenModeOff
-
-	// GenDeepCopyForced always runs controller-gen after CRD code generation
-	GenDeepCopyForced = GenModeForced
-)
-
 // Config holds all CLI configurable parameters
 type Config struct {
 	CoreConfig `yaml:",inline"`
@@ -88,14 +60,16 @@ type Plugin struct {
 	Name string `yaml:"name"`
 }
 
+// DeepCopy controls whether deepcopy markers are emitted in the generated code.
+// Generate defaults to true.
 type DeepCopy struct {
-	Generate          GenDeepCopy `yaml:"generate"`
-	ControllerGenPath string      `yaml:"controllerGenPath"`
+	Generate *bool `yaml:"generate"`
 }
 
-// ApplyConfiguration controls how apply configuration generation is handled
+// ApplyConfiguration controls whether apply configuration markers and the
+// SchemeGroupVersion alias are emitted in the generated code.
+// Generate defaults to false.
 type ApplyConfiguration struct {
-	Generate          GenMode `yaml:"generate"`
-	OutputPackage     string  `yaml:"outputPackage"`
-	ControllerGenPath string  `yaml:"controllerGenPath"`
+	Generate      bool   `yaml:"generate"`
+	OutputPackage string `yaml:"outputPackage"`
 }
