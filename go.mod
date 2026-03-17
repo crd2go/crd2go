@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/dave/jennifer v1.7.1
-	github.com/magefile/mage v1.15.0
+	github.com/magefile/mage v1.16.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/text v0.34.0
 	gopkg.in/yaml.v3 v3.0.1
