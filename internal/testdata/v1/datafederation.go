@@ -79,10 +79,10 @@ type CloudProviderConfig struct {
 	Aws *Aws `json:"aws,omitempty"`
 
 	// Azure Configuration for running Data Federation in Azure.
-	Azure *Azure `json:"azure,omitempty"`
+	Azure *DataFederationDataFederationSpecV20250312EntryCloudProviderConfigGcp `json:"azure,omitempty"`
 
 	// Gcp Configuration for running Data Federation in GCP.
-	Gcp *Azure `json:"gcp,omitempty"`
+	Gcp *DataFederationDataFederationSpecV20250312EntryCloudProviderConfigGcp `json:"gcp,omitempty"`
 }
 
 type Aws struct {
@@ -95,7 +95,7 @@ type Aws struct {
 	TestS3Bucket string `json:"testS3Bucket"`
 }
 
-type Azure struct {
+type DataFederationDataFederationSpecV20250312EntryCloudProviderConfigGcp struct {
 	// RoleId Unique identifier of the role that Data Federation can use to access the
 	// data stores. Required if specifying cloudProviderConfig.
 	RoleId string `json:"roleId"`

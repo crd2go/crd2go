@@ -31,7 +31,7 @@ type GroupSpec struct {
 type GroupSpecV20250312 struct {
 	// Entry The entry fields of the group resource spec. These fields can be set for
 	// creating and updating groups.
-	Entry *V20250312Entry `json:"entry,omitempty"`
+	Entry *GroupSpecV20250312Entry `json:"entry,omitempty"`
 
 	// ProjectOwnerId Unique 24-hexadecimal digit string that identifies the MongoDB
 	// Cloud user to whom to grant the Project Owner role on the specified project. If
@@ -40,7 +40,7 @@ type GroupSpecV20250312 struct {
 	ProjectOwnerId string `json:"projectOwnerId"`
 }
 
-type V20250312Entry struct {
+type GroupSpecV20250312Entry struct {
 	// Name Human-readable label that identifies the project included in the MongoDB
 	// Cloud organization.
 	Name string `json:"name"`
@@ -64,14 +64,14 @@ type V20250312Entry struct {
 
 	// Tags List that contains key-value pairs between 1 to 255 characters in length
 	// for tagging and categorizing the project.
-	Tags *[]Tags `json:"tags,omitempty"`
+	Tags *[]GroupGroupSpecV20250312EntryTags `json:"tags,omitempty"`
 
 	// WithDefaultAlertsSettings Flag that indicates whether to create the project with
 	// default alert settings.
 	WithDefaultAlertsSettings *bool `json:"withDefaultAlertsSettings,omitempty"`
 }
 
-type Tags struct {
+type GroupGroupSpecV20250312EntryTags struct {
 	// Key Constant that defines the set of the tag. For example, `environment` in the
 	// `environment : production` tag.
 	Key string `json:"key"`

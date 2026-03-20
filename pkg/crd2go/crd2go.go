@@ -140,6 +140,14 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 		return nil, fmt.Errorf("failed to generate CRDs code generation information: %w", err)
 	}
 
+	roots := make([]*gotype.GoType, 0, len(renderRequests))
+	for _, renderReq := range renderRequests {
+		roots = append(roots, renderReq.Type)
+	}
+	if err := req.TypeDict.RegisterAndResolve(roots); err != nil {
+		return nil, fmt.Errorf("failed to resolve type names: %w", err)
+	}
+
 	generatedGVRs := []string{}
 	for _, renderReq := range renderRequests {
 		if err := render.Default.RenderCRD(&renderReq); err != nil {
@@ -229,7 +237,6 @@ func autodetectGroupVersion(selectedGroup, selectedVersion, crdGroup, crdVersion
 }
 
 func buildCRDType(req *gotype.Request, versionedCRD *crd.VersionedCRD) (*gotype.GoType, error) {
-	req.TypeDict.Add(gotype.NewStruct(versionedCRD.Kind, nil)) // reserve the name of the root type not to be taken
 	specSchema := versionedCRD.Version.Schema.OpenAPIV3Schema.Properties["spec"]
 	spec, err := crd.FromOpenAPIType(req.TypeDict, hooks.Hooks, &crd.CRDType{
 		Name:    versionedCRD.SpecTypename(),

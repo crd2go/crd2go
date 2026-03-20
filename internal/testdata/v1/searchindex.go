@@ -65,7 +65,7 @@ type SearchIndexSpecV20250312Entry struct {
 	// create an Atlas Search index in.
 	Database string `json:"database"`
 
-	Definition *Definition `json:"definition,omitempty"`
+	Definition *EntryDefinition `json:"definition,omitempty"`
 
 	// Name Label that identifies this index. Within each namespace, names of all
 	// indexes in the namespace must be unique.
@@ -75,7 +75,7 @@ type SearchIndexSpecV20250312Entry struct {
 	Type *string `json:"type,omitempty"`
 }
 
-type Definition struct {
+type EntryDefinition struct {
 	/*
 	   Analyzer Specific pre-defined method chosen to convert database field text into searchable words. This conversion reduces the text of fields into the smallest units of text. These units are called a **term** or **token**. This process, known as tokenization, involves making the following changes to the text in fields:
 
@@ -200,7 +200,7 @@ type SearchIndexStatusV20250312 struct {
 
 	// LatestDefinitionVersion Object which includes the version number of the index
 	// definition and the time that the index definition was created.
-	LatestDefinitionVersion *LatestDefinitionVersion `json:"latestDefinitionVersion,omitempty"`
+	LatestDefinitionVersion *V20250312DefinitionVersion `json:"latestDefinitionVersion,omitempty"`
 
 	// Name Label that identifies this index. Within each namespace, the names of all
 	// indexes must be unique.
@@ -237,7 +237,7 @@ type SearchIndexStatusV20250312 struct {
 	Type *string `json:"type,omitempty"`
 }
 
-type LatestDefinitionVersion struct {
+type V20250312DefinitionVersion struct {
 	// CreatedAt The time at which this index definition was created. This parameter
 	// expresses its value in the ISO 8601 timestamp format in UTC.
 	CreatedAt *string `json:"createdAt,omitempty"`
@@ -252,13 +252,13 @@ type StatusDetail struct {
 	Hostname *string `json:"hostname,omitempty"`
 
 	// MainIndex Contains status information about a vector search index.
-	MainIndex *MainIndex `json:"mainIndex,omitempty"`
+	MainIndex *SearchIndexSearchIndexStatusV20250312StatusDetailMainIndex `json:"mainIndex,omitempty"`
 
 	// Queryable Flag that indicates whether the index is queryable on the host.
 	Queryable *bool `json:"queryable,omitempty"`
 
 	// StagedIndex Contains status information about a vector search index.
-	StagedIndex *MainIndex `json:"stagedIndex,omitempty"`
+	StagedIndex *SearchIndexSearchIndexStatusV20250312StatusDetailMainIndex `json:"stagedIndex,omitempty"`
 
 	/*
 	   Status Condition of the search index when you made this request.
@@ -273,13 +273,13 @@ type StatusDetail struct {
 	Status *string `json:"status,omitempty"`
 }
 
-type MainIndex struct {
+type SearchIndexSearchIndexStatusV20250312StatusDetailMainIndex struct {
 	// Definition The vector search index definition set by the user.
 	Definition *MainIndexDefinition `json:"definition,omitempty"`
 
 	// DefinitionVersion Object which includes the version number of the index
 	// definition and the time that the index definition was created.
-	DefinitionVersion *LatestDefinitionVersion `json:"definitionVersion,omitempty"`
+	DefinitionVersion *MainIndexDefinitionVersion `json:"definitionVersion,omitempty"`
 
 	// Message Optional message describing an error.
 	Message *string `json:"message,omitempty"`
@@ -309,6 +309,16 @@ type MainIndexDefinition struct {
 
 	// NumPartitions Number of index partitions. Allowed values are [1, 2, 4].
 	NumPartitions *int `json:"numPartitions,omitempty"`
+}
+
+type MainIndexDefinitionVersion struct {
+	// CreatedAt The time at which this index definition was created. This parameter
+	// expresses its value in the ISO 8601 timestamp format in UTC.
+	CreatedAt *string `json:"createdAt,omitempty"`
+
+	// Version The version number associated with this index definition when it was
+	// created.
+	Version *int `json:"version,omitempty"`
 }
 
 type SynonymMappingStatusDetail struct {

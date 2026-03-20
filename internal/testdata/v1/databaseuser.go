@@ -23,7 +23,7 @@ type DatabaseUser struct {
 
 	Spec DatabaseUserSpec `json:"spec,omitempty"`
 
-	Status DatabaseUserStatus `json:"status,omitempty"`
+	Status DatabaseUserCustomRoleStatus `json:"status,omitempty"`
 }
 
 type DatabaseUserSpec struct {
@@ -78,7 +78,7 @@ type DatabaseUserSpecV20250312Entry struct {
 
 	// Labels List that contains the key-value pairs for tagging and categorizing the
 	// MongoDB database user. The labels that you define do not appear in the console.
-	Labels *[]Tags `json:"labels,omitempty"`
+	Labels *[]DatabaseUserDatabaseUserSpecV20250312EntryTags `json:"labels,omitempty"`
 
 	// LdapAuthType Part of the Lightweight Directory Access Protocol (LDAP) record
 	// that the database uses to authenticate this database user on the LDAP host.
@@ -132,6 +132,14 @@ type DatabaseUserSpecV20250312Entry struct {
 	X509Type *string `json:"x509Type,omitempty"`
 }
 
+type DatabaseUserDatabaseUserSpecV20250312EntryTags struct {
+	// Key Key applied to tag and categorize this component.
+	Key *string `json:"key,omitempty"`
+
+	// Value Value set to the Key applied to tag and categorize this component.
+	Value *string `json:"value,omitempty"`
+}
+
 type Roles struct {
 	// CollectionName Collection on which this role applies.
 	CollectionName *string `json:"collectionName,omitempty"`
@@ -153,7 +161,7 @@ type Scopes struct {
 	Type string `json:"type"`
 }
 
-type DatabaseUserStatus struct {
+type DatabaseUserCustomRoleStatus struct {
 	// Conditions Represents the latest available observations of a resource's current
 	// state.
 	Conditions *[]metav1.Condition `json:"conditions,omitempty"`

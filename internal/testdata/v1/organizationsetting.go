@@ -20,7 +20,7 @@ type OrganizationSetting struct {
 
 	Spec OrganizationSettingSpec `json:"spec,omitempty"`
 
-	Status OrganizationSettingStatus `json:"status,omitempty"`
+	Status OrganizationSettingCustomRoleStatus `json:"status,omitempty"`
 }
 
 type OrganizationSettingSpec struct {
@@ -84,7 +84,7 @@ type OrganizationSettingSpecV20250312Entry struct {
 	StreamsCrossGroupEnabled *bool `json:"streamsCrossGroupEnabled,omitempty"`
 }
 
-type OrganizationSettingStatus struct {
+type OrganizationSettingCustomRoleStatus struct {
 	// Conditions Represents the latest available observations of a resource's current
 	// state.
 	Conditions *[]metav1.Condition `json:"conditions,omitempty"`

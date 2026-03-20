@@ -16,42 +16,42 @@
 package gotype
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/crd2go/crd2go/pkg/config"
 )
 
 func TestTypeDictHas(t *testing.T) {
 	tests := map[string]struct {
-		goType      *GoType
-		bySignature map[string]*GoType
-		expected    bool
+		goType   *GoType
+		preload  []*GoType
+		expected bool
 	}{
 		"empty dict": {
-			goType:      NewPrimitive("string", StringKind),
-			bySignature: map[string]*GoType{},
-			expected:    false,
+			goType:   NewStruct("User", []*GoField{}),
+			preload:  []*GoType{},
+			expected: false,
 		},
-		"existing item": {
-			goType: NewPrimitive("string", StringKind),
-			bySignature: map[string]*GoType{
-				"string": NewPrimitive("string", StringKind),
-			},
+		"existing item after resolve": {
+			goType:   NewStruct("User", []*GoField{}),
+			preload:  []*GoType{},
 			expected: true,
 		},
 		"non-existing item": {
-			goType: NewPrimitive("int", IntKind),
-			bySignature: map[string]*GoType{
-				"string": NewPrimitive("string", StringKind),
-			},
+			goType:   NewStruct("Other", []*GoField{}),
+			preload:  []*GoType{NewStruct("User", []*GoField{})},
 			expected: false,
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			td := TypeDict{
-				bySignature: tt.bySignature,
+			td := NewTypeDict(nil, tt.preload...)
+			if tt.expected {
+				root := NewStruct("Root", []*GoField{NewGoField("User", tt.goType)})
+				err := td.RegisterAndResolve([]*GoType{root})
+				requireNoErr(t, err)
 			}
 			assert.Equal(t, tt.expected, td.Has(tt.goType))
 		})
@@ -60,201 +60,121 @@ func TestTypeDictHas(t *testing.T) {
 
 func TestTypeDictGet(t *testing.T) {
 	tests := map[string]struct {
-		byName       map[string]*GoType
+		preload      []*GoType
 		name         string
 		expectedType *GoType
 		expected     bool
 	}{
 		"empty dict": {
-			byName:       map[string]*GoType{},
+			preload:      []*GoType{},
 			name:         "MyType",
 			expectedType: nil,
 			expected:     false,
 		},
-		"existing item": {
-			byName: map[string]*GoType{
-				"MyType": NewPrimitive("MyType", StringKind),
+		"known type by name": {
+			preload: []*GoType{
+				NewStruct("MyType", []*GoField{}),
 			},
 			name:         "MyType",
-			expectedType: NewPrimitive("MyType", StringKind),
+			expectedType: NewStruct("MyType", []*GoField{}),
 			expected:     true,
 		},
 		"non-existing item": {
-			byName: map[string]*GoType{
-				"MyType": NewPrimitive("MyType", StringKind),
+			preload: []*GoType{
+				NewStruct("MyType", []*GoField{}),
 			},
 			name:         "OtherType",
 			expectedType: nil,
 			expected:     false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			td := TypeDict{
-				byName: tt.byName,
-			}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			td := NewTypeDict(nil, tt.preload...)
 			goType, ok := td.Get(tt.name)
 			assert.Equal(t, tt.expected, ok)
-			assert.Equal(t, tt.expectedType, goType)
+			if tt.expected {
+				assert.Equal(t, tt.name, goType.Name)
+			} else {
+				assert.Nil(t, goType)
+			}
 		})
 	}
 }
 
 func TestTypeDictAddAll(t *testing.T) {
 	typeString := NewPrimitive("String", StringKind)
-	typeArrayOfString := NewArray(NewPrimitive("String", StringKind))
+	typeUser := NewStruct("User", []*GoField{})
 
-	tests := map[string]struct {
-		goTypes      []*GoType
-		expectedDict *TypeDict
-	}{
-		"add multiple types": {
-			goTypes: []*GoType{
-				typeString,
-				typeArrayOfString,
-			},
-			expectedDict: &TypeDict{
-				bySignature: map[string]*GoType{
-					"string":   typeString,
-					"[string]": typeArrayOfString,
-				},
-				byName: map[string]*GoType{
-					"String": typeString,
-					"":       typeArrayOfString,
-				},
-				generated: make(map[string]bool),
-				renames:   make(map[string]string),
-			},
-		},
-		"add duplicate types": {
-			goTypes: []*GoType{
-				typeString,
-				typeString,
-			},
-			expectedDict: &TypeDict{
-				bySignature: map[string]*GoType{
-					"string": typeString,
-				},
-				byName: map[string]*GoType{
-					"String": typeString,
-				},
-				generated: make(map[string]bool),
-				renames:   make(map[string]string),
-			},
-		},
-		"add no types": {
-			goTypes: []*GoType{},
-			expectedDict: &TypeDict{
-				bySignature: make(map[string]*GoType),
-				byName:      make(map[string]*GoType),
-				generated:   make(map[string]bool),
-				renames:     make(map[string]string),
-			},
-		},
-	}
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			td := NewTypeDict(map[string]string{}, []*GoType{}...)
-			td.AddAll(tt.goTypes...)
-			assert.Equal(t, tt.expectedDict, td)
-		})
-	}
+	td := NewTypeDict(map[string]string{}, []*GoType{}...)
+	td.AddAll(typeString, typeUser)
+
+	gt, ok := td.Get("String")
+	assert.True(t, ok)
+	assert.Equal(t, "String", gt.Name)
+
+	gt, ok = td.Get("User")
+	assert.True(t, ok)
+	assert.Equal(t, "User", gt.Name)
 }
 
 func TestTypeDict_MarkGenerated(t *testing.T) {
-	tests := map[string]struct {
-		gt *GoType
-	}{
-		"mark generated type": {
-			gt: NewPrimitive("String", StringKind),
-		},
-	}
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			td := NewTypeDict(map[string]string{}, []*GoType{}...)
-			td.MarkGenerated(tt.gt)
-			assert.True(t, td.WasGenerated(tt.gt))
-		})
-	}
+	gt := NewStruct("User", []*GoField{})
+	td := NewTypeDict(map[string]string{}, []*GoType{}...)
+	err := td.RegisterAndResolve([]*GoType{gt})
+	requireNoErr(t, err)
+
+	td.MarkGenerated(gt)
+	assert.True(t, td.WasGenerated(gt))
 }
 
-func TestTypeDict_RenameField(t *testing.T) {
-	tests := map[string]struct {
-		goField       *GoField
-		parentNames   []string
-		expectedField *GoField
-		expectedErr   error
-	}{
-		"rename field with nil GoType": {
-			goField:       NewGoField("Name", nil),
-			parentNames:   []string{},
-			expectedField: NewGoField("Name", nil),
-			expectedErr:   fmt.Errorf("failed to rename type for field Name: GoType is nil"),
-		},
-		"rename field with primitive GoType": {
-			goField:       NewGoField("Name", NewPrimitive("string", StringKind)),
-			parentNames:   []string{},
-			expectedField: NewGoField("Name", NewPrimitive("string", StringKind)),
-			expectedErr:   nil,
-		},
-		"rename field with non-primitive GoType": {
-			goField: NewGoField(
-				"Project",
-				NewStruct(
-					"ProjectObject",
-					[]*GoField{},
-				),
-			),
-			parentNames: []string{"Parent"},
-			expectedField: NewGoField(
-				"Project",
-				NewStruct(
-					"Project",
-					[]*GoField{},
-				),
-			),
-			expectedErr: nil,
-		},
-		"rename field with non-primitive GoType and already mapped type": {
-			goField: NewGoField(
-				"TeamList",
-				NewStruct("TeamList", []*GoField{}),
-			),
-			parentNames: []string{"Company"},
-			expectedField: NewGoField(
-				"TeamList",
-				NewStruct("CompanyTeams", []*GoField{}),
-			),
-			expectedErr: nil,
-		},
-		"reuse existing type": {
-			goField: NewGoField(
-				"Org",
-				NewStruct("Org", []*GoField{}),
-			),
-			parentNames: []string{},
-			expectedField: NewGoField(
-				"Org",
-				NewStruct("Organization", []*GoField{}),
-			),
-			expectedErr: nil,
-		},
-	}
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			td := NewTypeDict(
-				map[string]string{
-					"ProjectObject": "Project",
-					"TeamList":      "Teams",
-					"Org":           "Organization",
-				},
-				[]*GoType{
-					NewPrimitive("Teams", StringKind),
-					NewStruct("Organization", []*GoField{}),
-				}...,
-			)
-			assert.Equal(t, tt.expectedErr, td.RenameField(tt.goField, tt.parentNames))
-			assert.Equal(t, tt.expectedField, tt.goField)
-		})
+func TestTypeDict_RegisterAndResolve(t *testing.T) {
+	spec := NewStruct("Spec", []*GoField{NewGoField("Name", NewPrimitive("string", StringKind))})
+	root := NewStruct("Resource", []*GoField{NewGoField("Spec", spec)})
+
+	td := NewTypeDict(nil)
+	err := td.RegisterAndResolve([]*GoType{root})
+	requireNoErr(t, err)
+
+	assert.Equal(t, "Resource", root.Name)
+	assert.Equal(t, "Spec", spec.Name)
+}
+
+func TestTypeDict_RegisterAndResolve_WithRenames(t *testing.T) {
+	config := NewStruct("Config", []*GoField{})
+	root := NewStruct("Resource", []*GoField{NewGoField("Config", config)})
+
+	td := NewTypeDict(map[string]string{"Config": "Settings"})
+	err := td.RegisterAndResolve([]*GoType{root})
+	requireNoErr(t, err)
+
+	assert.Equal(t, "Settings", config.Name)
+}
+
+func TestTypeDict_RegisterAndResolve_WithKnownTypes(t *testing.T) {
+	known := NewStruct("Reference", []*GoField{
+		NewGoField("Name", NewPrimitive("string", StringKind)),
+		NewGoField("Namespace", NewPrimitive("string", StringKind)),
+	})
+	known.Import = &config.ImportInfo{Alias: "k8s", Path: "github.com/crd2go/crd2go/k8s"}
+
+	ref := NewStruct("CrossReference", []*GoField{
+		NewGoField("Name", NewPrimitive("string", StringKind)),
+		NewGoField("Namespace", NewPrimitive("string", StringKind)),
+	})
+	root := NewStruct("Resource", []*GoField{NewGoField("Ref", ref)})
+
+	td := NewTypeDict(nil, known)
+	err := td.RegisterAndResolve([]*GoType{root})
+	requireNoErr(t, err)
+
+	assert.Equal(t, "Reference", ref.Name)
+	assert.NotNil(t, ref.Import)
+}
+
+func requireNoErr(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

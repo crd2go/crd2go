@@ -25,16 +25,16 @@ type Organization struct {
 
 type OrganizationSpec struct {
 	// V20250312 The spec of the organization resource for version v20250312.
-	V20250312 *V20250312 `json:"v20250312,omitempty"`
+	V20250312 *OrganizationSpecV20250312 `json:"v20250312,omitempty"`
 }
 
-type V20250312 struct {
+type OrganizationSpecV20250312 struct {
 	// Entry The entry fields of the organization resource spec. These fields can be
 	// set for creating and updating organizations.
-	Entry *Entry `json:"entry,omitempty"`
+	Entry *OrganizationSpecV20250312Entry `json:"entry,omitempty"`
 }
 
-type Entry struct {
+type OrganizationSpecV20250312Entry struct {
 	// ApiKey Details of the programmatic API key to be created.
 	ApiKey *ApiKey `json:"apiKey,omitempty"`
 

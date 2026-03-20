@@ -35,7 +35,6 @@ func TestRenameType(t *testing.T) {
 		name           string
 		preloaded      []*gotype.GoType
 		input          *gotype.GoField
-		parents        []string
 		want           string
 		wantImportInfo bool
 	}{
@@ -50,17 +49,13 @@ func TestRenameType(t *testing.T) {
 					},
 				}),
 			),
-			parents: []string{"Group"},
-			want:    "Spec",
+			want: "Spec",
 		},
 
 		{
 			name: "Group Spec named GroupSpec with preloads",
 			preloaded: []*gotype.GoType{
-				{
-					Name: "Spec", // reserves this type name
-					Kind: "object",
-				},
+				gotype.NewStruct("Spec", []*gotype.GoField{}),
 			},
 			input: gotype.NewGoField(
 				"Spec",
@@ -69,11 +64,9 @@ func TestRenameType(t *testing.T) {
 						Name:   "V20231115",
 						GoType: &gotype.GoType{},
 					},
-				},
-				),
+				}),
 			),
-			parents: []string{"Group"},
-			want:    "GroupSpec",
+			want: "GroupSpec",
 		},
 
 		{
@@ -98,7 +91,6 @@ func TestRenameType(t *testing.T) {
 					},
 				}),
 			),
-			parents:        []string{"Group", "Spec"},
 			want:           "Reference",
 			wantImportInfo: true,
 		},
@@ -118,7 +110,6 @@ func TestRenameType(t *testing.T) {
 					},
 				}),
 			),
-			parents:        []string{"Group", "Spec"},
 			want:           "LocalReference",
 			wantImportInfo: true,
 		},
@@ -140,14 +131,14 @@ func TestRenameType(t *testing.T) {
 					}),
 				),
 			),
-			parents:        []string{"Group", "Spec"},
 			want:           "LocalReference",
 			wantImportInfo: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			td := gotype.NewTypeDict(nil, tc.preloaded...)
-			err := td.RenameField(tc.input, tc.parents)
+			root := gotype.NewStruct("Group", []*gotype.GoField{tc.input})
+			err := td.RegisterAndResolve([]*gotype.GoType{root})
 			require.NoError(t, err)
 			goType := tc.input.GoType
 			if goType.Kind == gotype.ArrayKind {
@@ -242,6 +233,7 @@ func TestBuildOpenAPIType(t *testing.T) {
 		gotype.NewGoField("SimpleNumber", gotype.NewPrimitive("float64", "float64")),
 		gotype.NewGoField("SimpleInteger", gotype.NewPrimitive("int", "int")),
 	})
+	require.NoError(t, td.RegisterAndResolve([]*gotype.GoType{goType}))
 	assert.Equal(t, expectedType, goType)
 }
 
@@ -338,7 +330,12 @@ func TestConditionsMatch(t *testing.T) {
 				},
 				Import: &config.ImportInfo{},
 			}
-			require.NoError(t, tc.td.RenameType([]string{"conditions"}, input))
+			root := gotype.NewStruct("Resource", []*gotype.GoField{
+				gotype.NewGoField("Status", gotype.NewStruct("Status", []*gotype.GoField{
+					gotype.NewGoField("Conditions", gotype.NewArray(input)),
+				})),
+			})
+			require.NoError(t, tc.td.RegisterAndResolve([]*gotype.GoType{root}))
 			want := &gotype.GoType{
 				Name: "Condition",
 				Kind: "struct",

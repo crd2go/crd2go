@@ -65,7 +65,7 @@ type ClusterSpecV20250312Entry struct {
 
 	// AdvancedConfiguration Group of settings that configures a subset of the advanced
 	// configuration details.
-	AdvancedConfiguration *AdvancedConfiguration `json:"advancedConfiguration,omitempty"`
+	AdvancedConfiguration *EntryAdvancedConfiguration `json:"advancedConfiguration,omitempty"`
 
 	// BackupEnabled Flag that indicates whether the cluster can perform backups. If
 	// set to `true`, the cluster can perform backups. You must set this value to
@@ -129,11 +129,11 @@ type ClusterSpecV20250312Entry struct {
 
 	   Cluster labels are deprecated and will be removed in a future release. We strongly recommend that you use Resource Tags instead.
 	*/
-	Labels *[]Tags `json:"labels,omitempty"`
+	Labels *[]ClusterClusterSpecV20250312EntryTags `json:"labels,omitempty"`
 
 	// MongoDBEmployeeAccessGrant MongoDB employee granted access level and expiration
 	// for a cluster.
-	MongoDBEmployeeAccessGrant *MongoDBEmployeeAccessGrant `json:"mongoDBEmployeeAccessGrant,omitempty"`
+	MongoDBEmployeeAccessGrant *EntryMongoDBEmployeeAccessGrant `json:"mongoDBEmployeeAccessGrant,omitempty"`
 
 	/*
 	   MongoDBMajorVersion MongoDB major version of the cluster. Set to the binary major version.
@@ -179,7 +179,7 @@ type ClusterSpecV20250312Entry struct {
 	// ReplicationSpecs List of settings that configure your cluster regions. This
 	// array has one object per shard representing node configurations in each shard.
 	// For replica sets there is only one object representing node configurations.
-	ReplicationSpecs *[]ReplicationSpecs `json:"replicationSpecs,omitempty"`
+	ReplicationSpecs *[]EntryReplicationSpecs `json:"replicationSpecs,omitempty"`
 
 	// RootCertType Root Certificate Authority that MongoDB Atlas cluster uses. MongoDB
 	// Cloud supports Internet Security Research Group.
@@ -187,7 +187,7 @@ type ClusterSpecV20250312Entry struct {
 
 	// Tags List that contains key-value pairs between 1 to 255 characters in length
 	// for tagging and categorizing the cluster.
-	Tags *[]Tags `json:"tags,omitempty"`
+	Tags *[]ClusterClusterSpecV20250312EntryTags `json:"tags,omitempty"`
 
 	// TerminationProtectionEnabled Flag that indicates whether termination protection
 	// is enabled on the cluster. If set to `true`, MongoDB Cloud won't delete the
@@ -199,7 +199,7 @@ type ClusterSpecV20250312Entry struct {
 	VersionReleaseSystem *string `json:"versionReleaseSystem,omitempty"`
 }
 
-type AdvancedConfiguration struct {
+type EntryAdvancedConfiguration struct {
 	// CustomOpensslCipherConfigTls12 The custom OpenSSL cipher suite list for TLS 1.2.
 	// This field is only valid when `tlsCipherConfigMode` is set to `CUSTOM`.
 	CustomOpensslCipherConfigTls12 *[]string `json:"customOpensslCipherConfigTls12,omitempty"`
@@ -228,7 +228,15 @@ type BiConnector struct {
 	ReadPreference *string `json:"readPreference,omitempty"`
 }
 
-type MongoDBEmployeeAccessGrant struct {
+type ClusterClusterSpecV20250312EntryTags struct {
+	// Key Key applied to tag and categorize this component.
+	Key *string `json:"key,omitempty"`
+
+	// Value Value set to the Key applied to tag and categorize this component.
+	Value *string `json:"value,omitempty"`
+}
+
+type EntryMongoDBEmployeeAccessGrant struct {
 	// ExpirationTime Expiration date for the employee access grant. This parameter
 	// expresses its value in the ISO 8601 timestamp format in UTC.
 	ExpirationTime string `json:"expirationTime"`
@@ -239,10 +247,10 @@ type MongoDBEmployeeAccessGrant struct {
 	// Links List of one or more Uniform Resource Locators (URLs) that point to API
 	// sub-resources, related API resources, or both. RFC 5988 outlines these
 	// relationships.
-	Links *[]Links `json:"links,omitempty"`
+	Links *[]EntryMongoDBEmployeeAccessGrantLinks `json:"links,omitempty"`
 }
 
-type Links struct {
+type EntryMongoDBEmployeeAccessGrantLinks struct {
 	// Href Uniform Resource Locator (URL) that points another API resource to which
 	// this response has some relationship. This URL often begins with
 	// `https://cloud.mongodb.com/api/atlas`.
@@ -254,7 +262,7 @@ type Links struct {
 	Rel *string `json:"rel,omitempty"`
 }
 
-type ReplicationSpecs struct {
+type EntryReplicationSpecs struct {
 	/*
 	   RegionConfigs Hardware specifications for nodes set for a given region. Each **regionConfigs** object describes the region's priority in elections and the number and type of MongoDB nodes that MongoDB Cloud deploys to the region. Each **regionConfigs** object must have either an **analyticsSpecs** object, **electableSpecs** object, or **readOnlySpecs** object. Tenant clusters only require **electableSpecs. Dedicated** clusters can specify any of these specifications, but must have at least one **electableSpecs** object within a **replicationSpec**.
 
@@ -277,16 +285,16 @@ type ReplicationSpecs struct {
 type RegionConfigs struct {
 	// AnalyticsAutoScaling Options that determine how this cluster handles resource
 	// scaling.
-	AnalyticsAutoScaling *AnalyticsAutoScaling `json:"analyticsAutoScaling,omitempty"`
+	AnalyticsAutoScaling *ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsAutoScaling `json:"analyticsAutoScaling,omitempty"`
 
 	// AnalyticsSpecs Hardware specifications for read-only nodes in the region.
 	// Read-only nodes can never become the primary member, but can enable local reads.
 	// If you don't specify this parameter, no read-only nodes are deployed to the
 	// region.
-	AnalyticsSpecs *AnalyticsSpecs `json:"analyticsSpecs,omitempty"`
+	AnalyticsSpecs *ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecs `json:"analyticsSpecs,omitempty"`
 
 	// AutoScaling Options that determine how this cluster handles resource scaling.
-	AutoScaling *AnalyticsAutoScaling `json:"autoScaling,omitempty"`
+	AutoScaling *ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsAutoScaling `json:"autoScaling,omitempty"`
 
 	/*
 	   BackingProviderName Cloud service provider on which MongoDB Cloud provisioned the multi-tenant cluster. The resource returns this parameter when **providerName** is `TENANT` and **electableSpecs.instanceSize** is `M0`, `M2` or `M5`.
@@ -316,7 +324,7 @@ type RegionConfigs struct {
 	// Read-only nodes can never become the primary member, but can enable local reads.
 	// If you don't specify this parameter, no read-only nodes are deployed to the
 	// region.
-	ReadOnlySpecs *AnalyticsSpecs `json:"readOnlySpecs,omitempty"`
+	ReadOnlySpecs *ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecs `json:"readOnlySpecs,omitempty"`
 
 	// RegionName Physical location of your MongoDB cluster nodes. The region you
 	// choose can affect network latency for clients accessing your databases. The
@@ -333,15 +341,15 @@ type RegionConfigs struct {
 	RegionName *string `json:"regionName,omitempty"`
 }
 
-type AnalyticsAutoScaling struct {
+type ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsAutoScaling struct {
 	// Compute Options that determine how this cluster handles CPU scaling.
-	Compute *Compute `json:"compute,omitempty"`
+	Compute *ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecsCompute `json:"compute,omitempty"`
 
 	// DiskGB Setting that enables disk auto-scaling.
-	DiskGB *DiskGB `json:"diskGB,omitempty"`
+	DiskGB *ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecsDiskGB `json:"diskGB,omitempty"`
 }
 
-type Compute struct {
+type ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecsCompute struct {
 	/*
 	   Enabled Flag that indicates whether instance size reactive auto-scaling is enabled.
 
@@ -374,14 +382,14 @@ type Compute struct {
 	ScaleDownEnabled *bool `json:"scaleDownEnabled,omitempty"`
 }
 
-type DiskGB struct {
+type ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecsDiskGB struct {
 	// Enabled Flag that indicates whether this cluster enables disk auto-scaling. The
 	// maximum memory allowed for the selected cluster tier and the oplog size can
 	// limit storage auto-scaling.
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
-type AnalyticsSpecs struct {
+type ClusterClusterSpecV20250312EntryReplicationSpecsRegionConfigsReadOnlySpecs struct {
 	/*
 	   DiskIOPS Target throughput desired for storage attached to your Azure-provisioned cluster. Change this parameter if you:
 
@@ -498,7 +506,7 @@ type ClusterStatus struct {
 type ClusterStatusV20250312 struct {
 	// AdvancedConfiguration Group of settings that configures a subset of the advanced
 	// configuration details.
-	AdvancedConfiguration *AdvancedConfiguration `json:"advancedConfiguration,omitempty"`
+	AdvancedConfiguration *V20250312AdvancedConfiguration `json:"advancedConfiguration,omitempty"`
 
 	/*
 	   ConfigServerManagementMode Config Server Management Mode for creating or updating a sharded cluster.
@@ -514,7 +522,7 @@ type ClusterStatusV20250312 struct {
 
 	// ConnectionStrings Collection of Uniform Resource Locators that point to the
 	// MongoDB database.
-	ConnectionStrings *ConnectionStrings `json:"connectionStrings,omitempty"`
+	ConnectionStrings *ClusterStatusV20250312ConnectionStrings `json:"connectionStrings,omitempty"`
 
 	// CreateDate Date and time when MongoDB Cloud created this cluster. This parameter
 	// expresses its value in ISO 8601 format in UTC.
@@ -548,7 +556,7 @@ type ClusterStatusV20250312 struct {
 
 	// MongoDBEmployeeAccessGrant MongoDB employee granted access level and expiration
 	// for a cluster.
-	MongoDBEmployeeAccessGrant *MongoDBEmployeeAccessGrant `json:"mongoDBEmployeeAccessGrant,omitempty"`
+	MongoDBEmployeeAccessGrant *V20250312MongoDBEmployeeAccessGrant `json:"mongoDBEmployeeAccessGrant,omitempty"`
 
 	// MongoDBVersion Version of MongoDB that the cluster runs.
 	MongoDBVersion *string `json:"mongoDBVersion,omitempty"`
@@ -585,7 +593,23 @@ type ClusterStatusV20250312 struct {
 	StateName *string `json:"stateName,omitempty"`
 }
 
-type ConnectionStrings struct {
+type V20250312AdvancedConfiguration struct {
+	// CustomOpensslCipherConfigTls12 The custom OpenSSL cipher suite list for TLS 1.2.
+	// This field is only valid when `tlsCipherConfigMode` is set to `CUSTOM`.
+	CustomOpensslCipherConfigTls12 *[]string `json:"customOpensslCipherConfigTls12,omitempty"`
+
+	// MinimumEnabledTlsProtocol Minimum Transport Layer Security (TLS) version that
+	// the cluster accepts for incoming connections. Clusters using TLS 1.0 or 1.1
+	// should consider setting TLS 1.2 as the minimum TLS protocol version.
+	MinimumEnabledTlsProtocol *string `json:"minimumEnabledTlsProtocol,omitempty"`
+
+	// TlsCipherConfigMode The TLS cipher suite configuration mode. The default mode
+	// uses the default cipher suites. The custom mode allows you to specify custom
+	// cipher suites for both TLS 1.2 and TLS 1.3.
+	TlsCipherConfigMode *string `json:"tlsCipherConfigMode,omitempty"`
+}
+
+type ClusterStatusV20250312ConnectionStrings struct {
 	// AwsPrivateLink Private endpoint-aware connection strings that use AWS-hosted
 	// clusters with Amazon Web Services (AWS) PrivateLink. Each key identifies an
 	// Amazon Web Services (AWS) interface endpoint. Each value identifies the related
@@ -693,6 +717,32 @@ type Endpoints struct {
 
 	// Region Region where the private endpoint is deployed.
 	Region *string `json:"region,omitempty"`
+}
+
+type V20250312MongoDBEmployeeAccessGrant struct {
+	// ExpirationTime Expiration date for the employee access grant. This parameter
+	// expresses its value in the ISO 8601 timestamp format in UTC.
+	ExpirationTime string `json:"expirationTime"`
+
+	// GrantType Level of access to grant to MongoDB Employees.
+	GrantType string `json:"grantType"`
+
+	// Links List of one or more Uniform Resource Locators (URLs) that point to API
+	// sub-resources, related API resources, or both. RFC 5988 outlines these
+	// relationships.
+	Links *[]V20250312MongoDBEmployeeAccessGrantLinks `json:"links,omitempty"`
+}
+
+type V20250312MongoDBEmployeeAccessGrantLinks struct {
+	// Href Uniform Resource Locator (URL) that points another API resource to which
+	// this response has some relationship. This URL often begins with
+	// `https://cloud.mongodb.com/api/atlas`.
+	Href *string `json:"href,omitempty"`
+
+	// Rel Uniform Resource Locator (URL) that defines the semantic relationship
+	// between this resource and another API resource. This URL often begins with
+	// `https://cloud.mongodb.com/api/atlas`.
+	Rel *string `json:"rel,omitempty"`
 }
 
 type V20250312ReplicationSpecs struct {

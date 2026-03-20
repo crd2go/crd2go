@@ -23,7 +23,7 @@ type CustomRole struct {
 
 	Spec CustomRoleSpec `json:"spec,omitempty"`
 
-	Status CustomRoleStatus `json:"status,omitempty"`
+	Status CustomRoleCustomRoleStatus `json:"status,omitempty"`
 }
 
 type CustomRoleSpec struct {
@@ -100,7 +100,7 @@ type InheritedRoles struct {
 	Role string `json:"role"`
 }
 
-type CustomRoleStatus struct {
+type CustomRoleCustomRoleStatus struct {
 	// Conditions Represents the latest available observations of a resource's current
 	// state.
 	Conditions *[]metav1.Condition `json:"conditions,omitempty"`

@@ -57,11 +57,11 @@ type FlexClusterSpecV20250312Entry struct {
 
 	// ProviderSettings Group of cloud provider settings that configure the provisioned
 	// MongoDB flex cluster.
-	ProviderSettings ProviderSettings `json:"providerSettings"`
+	ProviderSettings EntryProviderSettings `json:"providerSettings"`
 
 	// Tags List that contains key-value pairs between 1 to 255 characters in length
 	// for tagging and categorizing the instance.
-	Tags *[]Tags `json:"tags,omitempty"`
+	Tags *[]FlexClusterFlexClusterSpecV20250312EntryTags `json:"tags,omitempty"`
 
 	// TerminationProtectionEnabled Flag that indicates whether termination protection
 	// is enabled on the cluster. If set to `true`, MongoDB Cloud won't delete the
@@ -69,7 +69,7 @@ type FlexClusterSpecV20250312Entry struct {
 	TerminationProtectionEnabled *bool `json:"terminationProtectionEnabled,omitempty"`
 }
 
-type ProviderSettings struct {
+type EntryProviderSettings struct {
 	// BackingProviderName Cloud service provider on which MongoDB Cloud provisioned
 	// the flex cluster.
 	BackingProviderName string `json:"backingProviderName"`
@@ -81,6 +81,16 @@ type ProviderSettings struct {
 	// [GCP](https://docs.atlas.mongodb.com/reference/google-gcp/), and
 	// [Azure](https://docs.atlas.mongodb.com/reference/microsoft-azure/).
 	RegionName string `json:"regionName"`
+}
+
+type FlexClusterFlexClusterSpecV20250312EntryTags struct {
+	// Key Constant that defines the set of the tag. For example, `environment` in the
+	// `environment : production` tag.
+	Key string `json:"key"`
+
+	// Value Variable that belongs to the set of the tag. For example, `production` in
+	// the `environment : production` tag.
+	Value string `json:"value"`
 }
 
 type FlexClusterStatus struct {
@@ -95,14 +105,14 @@ type FlexClusterStatus struct {
 
 type FlexClusterStatusV20250312 struct {
 	// BackupSettings Flex backup configuration.
-	BackupSettings *DiskGB `json:"backupSettings,omitempty"`
+	BackupSettings *FlexClusterFlexClusterStatusV20250312DiskGB `json:"backupSettings,omitempty"`
 
 	// ClusterType Flex cluster topology.
 	ClusterType *string `json:"clusterType,omitempty"`
 
 	// ConnectionStrings Collection of Uniform Resource Locators that point to the
 	// MongoDB database.
-	ConnectionStrings *V20250312ConnectionStrings `json:"connectionStrings,omitempty"`
+	ConnectionStrings *FlexClusterStatusV20250312ConnectionStrings `json:"connectionStrings,omitempty"`
 
 	// CreateDate Date and time when MongoDB Cloud created this instance. This
 	// parameter expresses its value in ISO 8601 format in UTC.
@@ -132,7 +142,13 @@ type FlexClusterStatusV20250312 struct {
 	VersionReleaseSystem *string `json:"versionReleaseSystem,omitempty"`
 }
 
-type V20250312ConnectionStrings struct {
+type FlexClusterFlexClusterStatusV20250312DiskGB struct {
+	// Enabled Flag that indicates whether backups are performed for this flex cluster.
+	// Backup uses flex cluster backups.
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+type FlexClusterStatusV20250312ConnectionStrings struct {
 	// Standard Public connection string that you can use to connect to this cluster.
 	// This connection string uses the mongodb:// protocol.
 	Standard *string `json:"standard,omitempty"`

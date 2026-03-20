@@ -44,9 +44,6 @@ func ArrayHookFn(td *gotype.TypeDict, hooks []crd.OpenAPI2GoHook, crdType *crd.C
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse array %s element type: %w", crdType.Name, err)
 	}
-	if err := td.RenameType(crdType.Parents, elementType); err != nil {
-		return nil, fmt.Errorf("failed to rename element type under %s: %w", crdType.Name, err)
-	}
 
 	return gotype.NewArray(elementType), nil
 }

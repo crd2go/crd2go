@@ -23,21 +23,49 @@ import (
 	"sort"
 )
 
+// HashType returns a stable structural key for a GoType: the single representation
+// used for deduplication (NameEngine), known-type lookup (TypeDict), and builtins.
 func HashType(gt *GoType) string {
 	if gt == nil {
 		return ""
 	}
-	if gt.IsPrimitive() {
+	switch gt.Kind {
+	case OpaqueKind:
+		if gt.Import != nil {
+			return fmt.Sprintf("%s.%s", gt.Import.Path, gt.Name)
+		}
+		return gt.Name
+	case AutoImportKind:
+		if gt.Import != nil {
+			return fmt.Sprintf("%s.%s", gt.Import.Path, gt.Name)
+		}
+		return gt.Name
+	case StructKind:
+		if len(gt.Fields) == 0 {
+			sum := sha256.Sum256([]byte("struct:empty:" + gt.Name))
+			return fmt.Sprintf("sha256:%s", hex.EncodeToString(sum[:]))
+		}
+		hash := sha256.New()
+		for _, field := range gt.Fields {
+			_, _ = fmt.Fprintf(hash, "%s:%s", field.Name, HashType(field.GoType))
+		}
+		return fmt.Sprintf("sha256:%s", hex.EncodeToString(hash.Sum(nil)))
+	case ArrayKind:
+		if gt.Element == nil {
+			return "[]"
+		}
+		return fmt.Sprintf("[]%s", HashType(gt.Element))
+	case MapKind:
+		if gt.Element == nil {
+			return "map:"
+		}
+		return fmt.Sprintf("map:%s", HashType(gt.Element))
+	default:
+		if gt.IsPrimitive() {
+			return gt.Kind
+		}
 		return gt.Kind
 	}
-	if gt.Element != nil {
-		return fmt.Sprintf("[]%s", HashType(gt.Element))
-	}
-	hash := sha256.New()
-	for _, field := range gt.Fields {
-		hash.Write([]byte(fmt.Sprintf("%s:%s", field.Name, HashType(field.GoType))))
-	}
-	return fmt.Sprintf("sha256:%s", hex.EncodeToString(hash.Sum(nil)))
 }
 
 var ErrDuplicateRoot = errors.New("root already registered with same name/path")
@@ -47,14 +75,16 @@ type NameEngine interface {
 	// Returns ErrDuplicateRoot if a root is already registered with the same path.
 	Register(path []string, gt *GoType) error
 
-	// Get the named roots of the name engine
-	// This is a alphabetically sorted list of the types that are roots
-	// in the name engine.
-	// All types are uniquely and deterministically named with the shortest
-	// possible name.
-	// Collisions are resolved by appending the field parent
-	// name to all coliding types.
+	// NamedRoots returns the named roots and applies final names to all registered types.
+	// All types are uniquely and deterministically named with the shortest possible name.
+	// Collisions are resolved by prepending parent path segments.
 	NamedRoots() []*GoType
+
+	// Has returns true if a type with the same structure (hash) was registered.
+	Has(gt *GoType) bool
+
+	// Get returns a type by its final name. Must be called after NamedRoots.
+	Get(name string) (*GoType, bool)
 }
 
 type typeInfo struct {
@@ -64,9 +94,10 @@ type typeInfo struct {
 }
 
 type nameEngine struct {
-	byHash     map[string][]typeInfo
-	hashCache  map[*GoType]string
-	roots      []*GoType
+	byHash    map[string][]typeInfo
+	hashCache map[*GoType]string
+	roots     []*GoType
+	byName    map[string]*GoType
 }
 
 func NewNameEngine() NameEngine {
@@ -105,12 +136,41 @@ func (n *nameEngine) insertSorted(gt *GoType) bool {
 func (n *nameEngine) NamedRoots() []*GoType {
 	byName := n.deduplicateNIndex()
 	for _, candidateTypes := range byName {
-		if len(candidateTypes) <= 1 {
+		// Deduplicate by gt: aliases (same type at multiple paths) share one name; only resolve conflicts between different types.
+		unique := uniqueByGT(candidateTypes)
+		if len(unique) <= 1 {
 			continue
 		}
-		n.fixConflicts(candidateTypes)
+		n.fixConflicts(unique)
 	}
+	n.buildByNameIndex()
 	return n.roots
+}
+
+func (n *nameEngine) Has(gt *GoType) bool {
+	if gt == nil {
+		return false
+	}
+	hash := hashTypeFast(n.hashCache, gt.BaseType())
+	_, ok := n.byHash[hash]
+	return ok
+}
+
+func (n *nameEngine) Get(name string) (*GoType, bool) {
+	if n.byName == nil {
+		return nil, false
+	}
+	gt, ok := n.byName[name]
+	return gt, ok
+}
+
+func (n *nameEngine) buildByNameIndex() {
+	n.byName = make(map[string]*GoType)
+	for _, infos := range n.byHash {
+		if len(infos) > 0 {
+			n.byName[infos[0].gt.Name] = infos[0].gt
+		}
+	}
 }
 
 // deduplicateNIndex picks a winner name for each type (by hash), applies it to all aliases,
@@ -125,12 +185,37 @@ func (n *nameEngine) deduplicateNIndex() map[string][]typeInfo {
 		}
 		winner := bestName(infos)
 		for _, info := range infos {
-			info.gt.Name = winner
+			if !isRoot(info) {
+				info.gt.Name = winner
+			}
+			byName[info.gt.Name] = append(byName[info.gt.Name], info)
 		}
 		n.byHash[hash] = []typeInfo{infos[0]}
-		byName[winner] = append(byName[winner], infos[0])
 	}
 	return byName
+}
+
+func isRoot(info typeInfo) bool {
+	return len(info.path) == 1 && info.path[0] == info.gt.Name
+}
+
+// uniqueByGT returns one typeInfo per unique *GoType, keeping the one with shortest path.
+func uniqueByGT(infos []typeInfo) []typeInfo {
+	byGT := make(map[*GoType]typeInfo)
+	for _, info := range infos {
+		if existing, ok := byGT[info.gt]; ok {
+			if len(info.path) < len(existing.path) {
+				byGT[info.gt] = info
+			}
+			continue
+		}
+		byGT[info.gt] = info
+	}
+	out := make([]typeInfo, 0, len(byGT))
+	for _, info := range byGT {
+		out = append(out, info)
+	}
+	return out
 }
 
 func bestName(infos []typeInfo) string {
@@ -158,11 +243,18 @@ func (n *nameEngine) fixConflicts(candidateTypes []typeInfo) {
 			maxPathLen = len(c.path)
 		}
 	}
-	for round := 1; round <= maxPathLen; round++ {
+	// Prepend ancestor path segments (root first). Skip the last segment since it often equals the type name.
+	maxRounds := maxPathLen
+	if maxRounds > 0 {
+		maxRounds--
+	}
+	// Prepend from immediate parent toward root (leaf-to-root) to match legacy behavior.
+	for round := 1; round <= maxRounds; round++ {
 		for i := range candidateTypes {
 			c := &candidateTypes[i]
-			if round <= len(c.path) {
-				c.gt.Name = c.path[len(c.path)-round] + c.gt.Name
+			if round <= len(c.path)-1 {
+				idx := len(c.path) - 1 - round
+				c.gt.Name = c.path[idx] + c.gt.Name
 			}
 		}
 		seen := make(map[string]bool)

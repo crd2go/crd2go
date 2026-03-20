@@ -57,7 +57,7 @@ func TestHashType(t *testing.T) {
 		},
 		"non-primitive empty struct": {
 			goType: NewStruct("User", []*GoField{}),
-			want:   "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			want:   "sha256:8406ae6ab928c84e7196cd61a0bac2ae1c41fc4c7bb5c72a6c23643704dd988f",
 		},
 		"non-primitive struct with primitive fields": {
 			goType: NewStruct("User", []*GoField{
@@ -133,6 +133,12 @@ func TestHashType(t *testing.T) {
 	}
 }
 
+func TestHashType_EmptyStructsDistinctByName(t *testing.T) {
+	a := HashType(NewStruct("User", []*GoField{}))
+	b := HashType(NewStruct("Team", []*GoField{}))
+	assert.NotEqual(t, a, b, "empty structs must not collapse to the same key")
+}
+
 func TestHashType_Comparison(t *testing.T) {
 	hash1 := HashType(NewStruct("User", []*GoField{
 		NewGoField("Name", NewPrimitive("string", StringKind)),
@@ -158,77 +164,165 @@ func TestHashType_Comparison_DifferentFieldTypes(t *testing.T) {
 }
 
 func TestNameEngine(t *testing.T) {
-	spec := NewStruct("Spec", []*GoField{})     // shared for alias test
-	config := NewStruct("Config", []*GoField{}) // shared for roots-with-nested test
-	team := NewStruct("Team", []*GoField{})     // shared for duplicate-root test
-
 	tests := []struct {
 		name    string
-		regs    []nameEngineReg
+		regsFn  func() []nameEngineReg
 		want    []string
 		wantErr bool
 	}{
 		{
 			name: "single root",
-			regs: []nameEngineReg{
-				{path: []string{"Team"}, gt: NewStruct("Team", []*GoField{})},
+			regsFn: func() []nameEngineReg {
+				return []nameEngineReg{
+					{
+						path: []string{"Team"},
+						gt:   NewStruct("Team", []*GoField{}),
+					},
+				}
 			},
 			want: []string{"Team"},
 		},
 		{
 			name: "two roots sorted",
-			regs: []nameEngineReg{
-				{path: []string{"Cluster"}, gt: NewStruct("Cluster", []*GoField{NewGoField("C", NewPrimitive("string", StringKind))})},
-				{path: []string{"Team"}, gt: NewStruct("Team", []*GoField{NewGoField("T", NewPrimitive("string", StringKind))})},
+			regsFn: func() []nameEngineReg {
+				return []nameEngineReg{
+					{
+						path: []string{"Cluster"},
+						gt:   NewStruct("Cluster", []*GoField{NewGoField("C", NewPrimitive("string", StringKind))}),
+					},
+					{
+						path: []string{"Team"},
+						gt:   NewStruct("Team", []*GoField{NewGoField("T", NewPrimitive("string", StringKind))}),
+					},
+				}
 			},
 			want: []string{"Cluster", "Team"},
 		},
 		{
 			name: "nested non-root",
-			regs: []nameEngineReg{
-				{path: []string{"Cluster", "Spec"}, gt: NewStruct("Spec", []*GoField{})},
+			regsFn: func() []nameEngineReg {
+				specForCluster, clusterWithSpecOnly := newNestedClusterStructs()
+				return []nameEngineReg{
+					{
+						path: []string{"Cluster"},
+						gt:   clusterWithSpecOnly,
+					},
+					{
+						path: []string{"Cluster", "Spec"},
+						gt:   specForCluster,
+					},
+				}
 			},
-			want: []string{},
+			want: []string{"Cluster", "Spec"},
 		},
 		{
 			name: "root and nested",
-			regs: []nameEngineReg{
-				{path: []string{"Team"}, gt: NewStruct("Team", []*GoField{NewGoField("T", NewPrimitive("string", StringKind))})},
-				{path: []string{"Team", "Spec"}, gt: NewStruct("Spec", []*GoField{})},
+			regsFn: func() []nameEngineReg {
+				spec := newTestSpec()
+				return []nameEngineReg{
+					{
+						path: []string{"Team"},
+						gt:   NewStruct("Team", []*GoField{NewGoField("T", NewPrimitive("string", StringKind)), NewGoField("Spec", spec)}),
+					},
+					{
+						path: []string{"Team", "Spec"},
+						gt:   spec,
+					},
+				}
 			},
-			want: []string{"Team"},
+			want: []string{"Team", "Spec"},
 		},
 		{
 			name: "conflict resolved by prepend",
-			regs: []nameEngineReg{
-				{path: []string{"A", "Config"}, gt: NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})},
-				{path: []string{"B", "Config"}, gt: NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})},
+			regsFn: func() []nameEngineReg {
+				structA, configA := newConflictStructsA()
+				structB, configB := newConflictStructsB()
+				return []nameEngineReg{
+					{
+						path: []string{"A"},
+						gt:   structA,
+					},
+					{
+						path: []string{"A", "Config"},
+						gt:   configA,
+					},
+					{
+						path: []string{"B"},
+						gt:   structB,
+					},
+					{
+						path: []string{"B", "Config"},
+						gt:   configB,
+					},
+				}
 			},
-			want: []string{},
+			want: []string{"A", "AConfig", "B", "BConfig"},
 		},
 		{
 			name: "alias deduplicated",
-			regs: []nameEngineReg{
-				{path: []string{"Team", "Spec"}, gt: spec},
-				{path: []string{"Cluster", "Spec"}, gt: spec},
+			regsFn: func() []nameEngineReg {
+				spec := newTestSpec()
+				teamWithSpec, clusterWithSpec := newAliasStructs(spec)
+				return []nameEngineReg{
+					{
+						path: []string{"Team"},
+						gt:   teamWithSpec,
+					},
+					{
+						path: []string{"Team", "Spec"},
+						gt:   spec,
+					},
+					{
+						path: []string{"Cluster"},
+						gt:   clusterWithSpec,
+					},
+					{
+						path: []string{"Cluster", "Spec"},
+						gt:   spec,
+					},
+				}
 			},
-			want: []string{},
+			want: []string{"Cluster", "Spec", "Team"},
 		},
 		{
 			name: "roots with same-named nested",
-			regs: []nameEngineReg{
-				{path: []string{"Team"}, gt: NewStruct("Team", []*GoField{NewGoField("T", NewPrimitive("string", StringKind))})},
-				{path: []string{"Cluster"}, gt: NewStruct("Cluster", []*GoField{NewGoField("C", NewPrimitive("string", StringKind))})},
-				{path: []string{"Team", "Config"}, gt: config},
-				{path: []string{"Cluster", "Config"}, gt: config},
+			regsFn: func() []nameEngineReg {
+				config := newTestConfig()
+				return []nameEngineReg{
+					{
+						path: []string{"Team"},
+						gt:   NewStruct("Team", []*GoField{NewGoField("T", NewPrimitive("string", StringKind)), NewGoField("Config", config)}),
+					},
+					{
+						path: []string{"Cluster"},
+						gt:   NewStruct("Cluster", []*GoField{NewGoField("C", NewPrimitive("string", StringKind)), NewGoField("Config", config)}),
+					},
+					{
+						path: []string{"Team", "Config"},
+						gt:   config,
+					},
+					{
+						path: []string{"Cluster", "Config"},
+						gt:   config,
+					},
+				}
 			},
-			want: []string{"Cluster", "Team"},
+			want: []string{"Cluster", "Config", "Team"},
 		},
 		{
 			name: "duplicate root errors",
-			regs: []nameEngineReg{
-				{path: []string{"Team"}, gt: team},
-				{path: []string{"Team"}, gt: team},
+			regsFn: func() []nameEngineReg {
+				team := newTestTeam()
+				return []nameEngineReg{
+					{
+						path: []string{"Team"},
+						gt:   team,
+					},
+					{
+						path: []string{"Team"},
+						gt:   team,
+					},
+				}
 			},
 			wantErr: true,
 		},
@@ -236,9 +330,10 @@ func TestNameEngine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			regs := tt.regsFn()
 			ne := NewNameEngine().(*nameEngine)
 			var regErr error
-			for _, r := range tt.regs {
+			for _, r := range regs {
 				regErr = ne.Register(r.path, r.gt)
 				if regErr != nil {
 					break
@@ -251,13 +346,73 @@ func TestNameEngine(t *testing.T) {
 			}
 			require.NoError(t, regErr)
 			roots := ne.NamedRoots()
-			names := make([]string, len(roots))
-			for i, r := range roots {
-				names[i] = r.Name
-			}
-			assert.Equal(t, tt.want, names)
+			got := collectNonPrimitiveNames(roots)
+			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func newTestSpec() *GoType {
+	return NewStruct("Spec", []*GoField{})
+}
+
+func newTestConfig() *GoType {
+	return NewStruct("Config", []*GoField{})
+}
+
+func newTestTeam() *GoType {
+	return NewStruct("Team", []*GoField{})
+}
+
+func newConflictStructsA() (structA, configA *GoType) {
+	configA = NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+	structA = NewStruct("A", []*GoField{NewGoField("Config", configA)})
+	return structA, configA
+}
+
+func newConflictStructsB() (structB, configB *GoType) {
+	configB = NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+	structB = NewStruct("B", []*GoField{NewGoField("Config", configB)})
+	return structB, configB
+}
+
+func newAliasStructs(spec *GoType) (teamWithSpec, clusterWithSpec *GoType) {
+	teamWithSpec = NewStruct("Team", []*GoField{NewGoField("Spec", spec)})
+	clusterWithSpec = NewStruct("Cluster", []*GoField{NewGoField("Spec", spec)})
+	return teamWithSpec, clusterWithSpec
+}
+
+func newNestedClusterStructs() (specForCluster, clusterWithSpecOnly *GoType) {
+	specForCluster = NewStruct("Spec", []*GoField{})
+	clusterWithSpecOnly = NewStruct("Cluster", []*GoField{NewGoField("Spec", specForCluster)})
+	return specForCluster, clusterWithSpecOnly
+}
+
+// collectNonPrimitiveNames traverses roots and returns all non-primitive type names in order of first appearance.
+func collectNonPrimitiveNames(roots []*GoType) []string {
+	var names []string
+	seen := make(map[*GoType]bool)
+	var visit func(gt *GoType)
+	visit = func(gt *GoType) {
+		if gt == nil || seen[gt] {
+			return
+		}
+		seen[gt] = true
+		if gt.IsPrimitive() {
+			return
+		}
+		names = append(names, gt.Name)
+		if gt.Element != nil {
+			visit(gt.Element)
+		}
+		for _, f := range gt.Fields {
+			visit(f.GoType)
+		}
+	}
+	for _, r := range roots {
+		visit(r)
+	}
+	return names
 }
 
 type nameEngineReg struct {

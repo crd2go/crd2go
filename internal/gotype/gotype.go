@@ -16,7 +16,6 @@
 package gotype
 
 import (
-	"fmt"
 	"path"
 	"sort"
 	"strings"
@@ -122,35 +121,6 @@ func (gt *GoType) IsPrimitive() bool {
 	default:
 		return false
 	}
-}
-
-// signature generates a unique signature for a GoType reflecting its structure.
-// This is leveraged by TypeDict to check if a type is already registered with
-// the same internal structure, regardless of the name.
-func (gt *GoType) Signature() string {
-	if gt == nil {
-		return "nil"
-	}
-	if gt.Kind == OpaqueKind {
-		if gt.Import != nil {
-			return fmt.Sprintf("%s.%s", gt.Import.Path, gt.Name)
-		}
-		return gt.Name
-	}
-	if gt.Kind == StructKind {
-		if len(gt.Fields) == 0 { // de-duplicate empty structs as different types
-			return fmt.Sprintf("{%s}", gt.Name)
-		}
-		fieldSignatures := make([]string, 0, len(gt.Fields))
-		for _, field := range gt.Fields {
-			fieldSignatures = append(fieldSignatures, field.Signature())
-		}
-		return fmt.Sprintf("{%s}", strings.Join(fieldSignatures, ","))
-	}
-	if gt.Kind == ArrayKind {
-		return fmt.Sprintf("[%s]", gt.Element.Signature())
-	}
-	return gt.Kind
 }
 
 // BaseType returns the base type of the GoType.
