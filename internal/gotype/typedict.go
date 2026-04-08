@@ -16,6 +16,8 @@
 package gotype
 
 import (
+	"fmt"
+
 	"github.com/crd2go/crd2go/pkg/config"
 )
 
@@ -23,10 +25,10 @@ import (
 // It embeds a NameEngine for naming and deduplication, and separately tracks which
 // types have already been emitted during generation (render).
 type TypeDict struct {
-	nameEngine    NameEngine
-	knownTypes    map[string]*GoType
-	knownByHash   map[string]*GoType
-	renames       map[string]string
+	nameEngine  NameEngine
+	knownTypes  map[string]*GoType
+	knownByHash map[string]*GoType
+	renames     map[string]string
 	// generated records type names that have been rendered (keyed by final Go type name).
 	generated map[string]bool
 }
@@ -105,7 +107,11 @@ func (td *TypeDict) RegisterAndResolve(roots []*GoType) error {
 			return err
 		}
 	}
-	_ = td.nameEngine.NamedRoots()
+	roots, err := td.nameEngine.NamedRoots()
+	if err != nil {
+		return fmt.Errorf("failed to process type names: %w", err)
+	}
+	td.AddAll(roots...)
 	return nil
 }
 

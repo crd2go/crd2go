@@ -163,6 +163,23 @@ func TestHashType_Comparison_DifferentFieldTypes(t *testing.T) {
 	assert.Equal(t, "sha256:6289d5681e93ea53dd9a075241495a10474fb579fda376f637fd26c35a9d447a", hash2)
 }
 
+func TestUniqueTypes_sameHashDistinctPointers(t *testing.T) {
+	c1 := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+	c2 := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+	require.Equal(t, HashType(c1), HashType(c2))
+	ne := NewNameEngine().(*nameEngine)
+	h1 := hashTypeFast(ne.hashCache, c1)
+	h2 := hashTypeFast(ne.hashCache, c2)
+	require.Equal(t, h1, h2)
+	infos := []typeInfo{
+		{path: []string{"A", "Config"}, hash: h1, gt: c1},
+		{path: []string{"B", "Config"}, hash: h2, gt: c2},
+	}
+	out := uniqueTypes(infos)
+	require.Len(t, out, 1, "same structural hash must collapse to one candidate")
+	assert.Equal(t, []string{"A", "Config"}, out[0].path)
+}
+
 func TestNameEngine(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -345,7 +362,8 @@ func TestNameEngine(t *testing.T) {
 				return
 			}
 			require.NoError(t, regErr)
-			roots := ne.NamedRoots()
+			roots, err := ne.NamedRoots()
+			require.NoError(t, err)
 			got := collectNonPrimitiveNames(roots)
 			assert.Equal(t, tt.want, got)
 		})

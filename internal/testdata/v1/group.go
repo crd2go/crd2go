@@ -64,14 +64,14 @@ type GroupSpecV20250312Entry struct {
 
 	// Tags List that contains key-value pairs between 1 to 255 characters in length
 	// for tagging and categorizing the project.
-	Tags *[]GroupGroupSpecV20250312EntryTags `json:"tags,omitempty"`
+	Tags *[]Tags `json:"tags,omitempty"`
 
 	// WithDefaultAlertsSettings Flag that indicates whether to create the project with
 	// default alert settings.
 	WithDefaultAlertsSettings *bool `json:"withDefaultAlertsSettings,omitempty"`
 }
 
-type GroupGroupSpecV20250312EntryTags struct {
+type Tags struct {
 	// Key Constant that defines the set of the tag. For example, `environment` in the
 	// `environment : production` tag.
 	Key string `json:"key"`

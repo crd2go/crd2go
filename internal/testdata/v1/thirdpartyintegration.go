@@ -73,7 +73,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	ApiKeySecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"apiKeySecretRef,omitempty"`
+	ApiKeySecretRef *UrlSecretRef `json:"apiKeySecretRef,omitempty"`
 
 	/*
 	   ApiTokenSecretRef SENSITIVE FIELD
@@ -90,7 +90,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   **IMPORTANT**: Slack integrations now use the OAuth2 verification method and must  be initially configured, or updated from a legacy integration, through the Atlas  third-party service integrations page. Legacy tokens will soon no longer be  supported.
 	*/
-	ApiTokenSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"apiTokenSecretRef,omitempty"`
+	ApiTokenSecretRef *UrlSecretRef `json:"apiTokenSecretRef,omitempty"`
 
 	// ChannelName Name of the Slack channel to which MongoDB Cloud sends alert
 	// notifications.
@@ -110,7 +110,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 	   **IMPORTANT**: Effective Wednesday, June 16th, 2021, New Relic no longer supports the plugin-based integration with MongoDB. We do not recommend that you sign up for the plugin-based integration.
 	   Consider configuring an alternative monitoring integration before June 16th to maintain visibility into your MongoDB deployments.
 	*/
-	LicenseKeySecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"licenseKeySecretRef,omitempty"`
+	LicenseKeySecretRef *UrlSecretRef `json:"licenseKeySecretRef,omitempty"`
 
 	/*
 	   MicrosoftTeamsWebhookUrlSecretRef SENSITIVE FIELD
@@ -121,7 +121,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   **NOTE**: When you view or edit the alert for a Microsoft Teams notification, the URL appears partially redacted.
 	*/
-	MicrosoftTeamsWebhookUrlSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"microsoftTeamsWebhookUrlSecretRef,omitempty"`
+	MicrosoftTeamsWebhookUrlSecretRef *UrlSecretRef `json:"microsoftTeamsWebhookUrlSecretRef,omitempty"`
 
 	/*
 	   PasswordSecretRef SENSITIVE FIELD
@@ -130,7 +130,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   Password needed to allow MongoDB Cloud to access your Prometheus account.
 	*/
-	PasswordSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"passwordSecretRef,omitempty"`
+	PasswordSecretRef *UrlSecretRef `json:"passwordSecretRef,omitempty"`
 
 	/*
 	   ReadTokenSecretRef SENSITIVE FIELD
@@ -139,7 +139,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   Query key used to access your New Relic account.
 	*/
-	ReadTokenSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"readTokenSecretRef,omitempty"`
+	ReadTokenSecretRef *UrlSecretRef `json:"readTokenSecretRef,omitempty"`
 
 	// Region PagerDuty region that indicates the API Uniform Resource Locator (URL) to
 	// use.
@@ -152,7 +152,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   Routing key associated with your Splunk On-Call account.
 	*/
-	RoutingKeySecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"routingKeySecretRef,omitempty"`
+	RoutingKeySecretRef *UrlSecretRef `json:"routingKeySecretRef,omitempty"`
 
 	/*
 	   SecretSecretRef SENSITIVE FIELD
@@ -163,7 +163,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   **NOTE**: When you view or edit the alert for a webhook notification, the secret appears completely redacted.
 	*/
-	SecretSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"secretSecretRef,omitempty"`
+	SecretSecretRef *UrlSecretRef `json:"secretSecretRef,omitempty"`
 
 	// SendCollectionLatencyMetrics Toggle sending collection latency metrics that
 	// includes database names and collection namesand latency metrics on reads,
@@ -194,7 +194,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	ServiceKeySecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"serviceKeySecretRef,omitempty"`
+	ServiceKeySecretRef *UrlSecretRef `json:"serviceKeySecretRef,omitempty"`
 
 	// TeamName Human-readable label that identifies your Slack team. Set this
 	// parameter when you configure a legacy Slack integration.
@@ -214,7 +214,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   **NOTE**: When you view or edit the alert for a webhook notification, the URL appears partially redacted.
 	*/
-	UrlSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"urlSecretRef,omitempty"`
+	UrlSecretRef *UrlSecretRef `json:"urlSecretRef,omitempty"`
 
 	// Username Human-readable label that identifies your Prometheus incoming webhook.
 	Username *string `json:"username,omitempty"`
@@ -226,16 +226,7 @@ type ThirdPartyIntegrationSpecV20250312Entry struct {
 
 	   Insert key associated with your New Relic account.
 	*/
-	WriteTokenSecretRef *ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef `json:"writeTokenSecretRef,omitempty"`
-}
-
-type ThirdPartyIntegrationThirdPartyIntegrationSpecV20250312EntryUrlSecretRef struct {
-	// Key Key of the secret data containing the sensitive field value, defaults to
-	// "apiKey".
-	Key *string `json:"key,omitempty"`
-
-	// Name Name of the secret containing the sensitive field value.
-	Name *string `json:"name,omitempty"`
+	WriteTokenSecretRef *UrlSecretRef `json:"writeTokenSecretRef,omitempty"`
 }
 
 type ThirdPartyIntegrationStatus struct {

@@ -200,7 +200,7 @@ type SearchIndexStatusV20250312 struct {
 
 	// LatestDefinitionVersion Object which includes the version number of the index
 	// definition and the time that the index definition was created.
-	LatestDefinitionVersion *V20250312DefinitionVersion `json:"latestDefinitionVersion,omitempty"`
+	LatestDefinitionVersion *DefinitionVersion `json:"latestDefinitionVersion,omitempty"`
 
 	// Name Label that identifies this index. Within each namespace, the names of all
 	// indexes must be unique.
@@ -237,7 +237,7 @@ type SearchIndexStatusV20250312 struct {
 	Type *string `json:"type,omitempty"`
 }
 
-type V20250312DefinitionVersion struct {
+type DefinitionVersion struct {
 	// CreatedAt The time at which this index definition was created. This parameter
 	// expresses its value in the ISO 8601 timestamp format in UTC.
 	CreatedAt *string `json:"createdAt,omitempty"`
@@ -252,13 +252,13 @@ type StatusDetail struct {
 	Hostname *string `json:"hostname,omitempty"`
 
 	// MainIndex Contains status information about a vector search index.
-	MainIndex *SearchIndexSearchIndexStatusV20250312StatusDetailMainIndex `json:"mainIndex,omitempty"`
+	MainIndex *MainIndex `json:"mainIndex,omitempty"`
 
 	// Queryable Flag that indicates whether the index is queryable on the host.
 	Queryable *bool `json:"queryable,omitempty"`
 
 	// StagedIndex Contains status information about a vector search index.
-	StagedIndex *SearchIndexSearchIndexStatusV20250312StatusDetailMainIndex `json:"stagedIndex,omitempty"`
+	StagedIndex *MainIndex `json:"stagedIndex,omitempty"`
 
 	/*
 	   Status Condition of the search index when you made this request.
@@ -273,13 +273,13 @@ type StatusDetail struct {
 	Status *string `json:"status,omitempty"`
 }
 
-type SearchIndexSearchIndexStatusV20250312StatusDetailMainIndex struct {
+type MainIndex struct {
 	// Definition The vector search index definition set by the user.
 	Definition *MainIndexDefinition `json:"definition,omitempty"`
 
 	// DefinitionVersion Object which includes the version number of the index
 	// definition and the time that the index definition was created.
-	DefinitionVersion *MainIndexDefinitionVersion `json:"definitionVersion,omitempty"`
+	DefinitionVersion *DefinitionVersion `json:"definitionVersion,omitempty"`
 
 	// Message Optional message describing an error.
 	Message *string `json:"message,omitempty"`
@@ -309,16 +309,6 @@ type MainIndexDefinition struct {
 
 	// NumPartitions Number of index partitions. Allowed values are [1, 2, 4].
 	NumPartitions *int `json:"numPartitions,omitempty"`
-}
-
-type MainIndexDefinitionVersion struct {
-	// CreatedAt The time at which this index definition was created. This parameter
-	// expresses its value in the ISO 8601 timestamp format in UTC.
-	CreatedAt *string `json:"createdAt,omitempty"`
-
-	// Version The version number associated with this index definition when it was
-	// created.
-	Version *int `json:"version,omitempty"`
 }
 
 type SynonymMappingStatusDetail struct {

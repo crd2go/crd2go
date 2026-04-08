@@ -61,7 +61,7 @@ type FlexClusterSpecV20250312Entry struct {
 
 	// Tags List that contains key-value pairs between 1 to 255 characters in length
 	// for tagging and categorizing the instance.
-	Tags *[]FlexClusterFlexClusterSpecV20250312EntryTags `json:"tags,omitempty"`
+	Tags *[]Tags `json:"tags,omitempty"`
 
 	// TerminationProtectionEnabled Flag that indicates whether termination protection
 	// is enabled on the cluster. If set to `true`, MongoDB Cloud won't delete the
@@ -83,16 +83,6 @@ type EntryProviderSettings struct {
 	RegionName string `json:"regionName"`
 }
 
-type FlexClusterFlexClusterSpecV20250312EntryTags struct {
-	// Key Constant that defines the set of the tag. For example, `environment` in the
-	// `environment : production` tag.
-	Key string `json:"key"`
-
-	// Value Variable that belongs to the set of the tag. For example, `production` in
-	// the `environment : production` tag.
-	Value string `json:"value"`
-}
-
 type FlexClusterStatus struct {
 	// Conditions Represents the latest available observations of a resource's current
 	// state.
@@ -105,7 +95,7 @@ type FlexClusterStatus struct {
 
 type FlexClusterStatusV20250312 struct {
 	// BackupSettings Flex backup configuration.
-	BackupSettings *FlexClusterFlexClusterStatusV20250312DiskGB `json:"backupSettings,omitempty"`
+	BackupSettings *DiskGB `json:"backupSettings,omitempty"`
 
 	// ClusterType Flex cluster topology.
 	ClusterType *string `json:"clusterType,omitempty"`
@@ -140,12 +130,6 @@ type FlexClusterStatusV20250312 struct {
 
 	// VersionReleaseSystem Method by which the cluster maintains the MongoDB versions.
 	VersionReleaseSystem *string `json:"versionReleaseSystem,omitempty"`
-}
-
-type FlexClusterFlexClusterStatusV20250312DiskGB struct {
-	// Enabled Flag that indicates whether backups are performed for this flex cluster.
-	// Backup uses flex cluster backups.
-	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type FlexClusterStatusV20250312ConnectionStrings struct {

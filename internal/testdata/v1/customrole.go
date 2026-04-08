@@ -23,7 +23,7 @@ type CustomRole struct {
 
 	Spec CustomRoleSpec `json:"spec,omitempty"`
 
-	Status CustomRoleCustomRoleStatus `json:"status,omitempty"`
+	Status CustomRoleStatus `json:"status,omitempty"`
 }
 
 type CustomRoleSpec struct {
@@ -98,12 +98,6 @@ type InheritedRoles struct {
 	// Role Human-readable label that identifies the role inherited. Set this value to
 	// `admin` for every role except `read` or `readWrite`.
 	Role string `json:"role"`
-}
-
-type CustomRoleCustomRoleStatus struct {
-	// Conditions Represents the latest available observations of a resource's current
-	// state.
-	Conditions *[]metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

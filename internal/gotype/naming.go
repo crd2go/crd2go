@@ -23,6 +23,8 @@ import (
 	"sort"
 )
 
+var ErrUnresolvedNameCollision = errors.New("could not assign distinct Go names to colliding types")
+
 // HashType returns a stable structural key for a GoType: the single representation
 // used for deduplication (NameEngine), known-type lookup (TypeDict), and builtins.
 func HashType(gt *GoType) string {
@@ -78,7 +80,7 @@ type NameEngine interface {
 	// NamedRoots returns the named roots and applies final names to all registered types.
 	// All types are uniquely and deterministically named with the shortest possible name.
 	// Collisions are resolved by prepending parent path segments.
-	NamedRoots() []*GoType
+	NamedRoots() ([]*GoType, error)
 
 	// Has returns true if a type with the same structure (hash) was registered.
 	Has(gt *GoType) bool
@@ -133,18 +135,19 @@ func (n *nameEngine) insertSorted(gt *GoType) bool {
 	return true
 }
 
-func (n *nameEngine) NamedRoots() []*GoType {
-	byName := n.deduplicateNIndex()
-	for _, candidateTypes := range byName {
-		// Deduplicate by gt: aliases (same type at multiple paths) share one name; only resolve conflicts between different types.
-		unique := uniqueByGT(candidateTypes)
-		if len(unique) <= 1 {
+func (n *nameEngine) NamedRoots() ([]*GoType, error) {
+	byName := n.solveTypeAliases()
+	for _, sameName := range byName {
+		conflictingTypes := uniqueTypes(sameName)
+		if len(conflictingTypes) <= 1 {
 			continue
 		}
-		n.fixConflicts(unique)
+		if err := n.solveConflcitingNames(conflictingTypes); err != nil {
+			return nil, err
+		}
 	}
 	n.buildByNameIndex()
-	return n.roots
+	return n.roots, nil
 }
 
 func (n *nameEngine) Has(gt *GoType) bool {
@@ -173,10 +176,10 @@ func (n *nameEngine) buildByNameIndex() {
 	}
 }
 
-// deduplicateNIndex picks a winner name for each type (by hash), applies it to all aliases,
+// solveTypeAliases picks a winner name for each type (by hash), applies it to all aliases,
 // and builds a byName index in a single pass. Returns the index for conflict resolution.
 // Winner: shortest name, then first alphabetically.
-func (n *nameEngine) deduplicateNIndex() map[string][]typeInfo {
+func (n *nameEngine) solveTypeAliases() map[string][]typeInfo {
 	byName := make(map[string][]typeInfo)
 	for hash, infos := range n.byHash {
 		if len(infos) == 1 {
@@ -199,20 +202,23 @@ func isRoot(info typeInfo) bool {
 	return len(info.path) == 1 && info.path[0] == info.gt.Name
 }
 
-// uniqueByGT returns one typeInfo per unique *GoType, keeping the one with shortest path.
-func uniqueByGT(infos []typeInfo) []typeInfo {
-	byGT := make(map[*GoType]typeInfo)
+// uniqueTypes returns one typeInfo per unique GoType (by hash).
+// For types with the same hash, it keeps the one with shortest path, closer to
+// the root.
+func uniqueTypes(infos []typeInfo) []typeInfo {
+	byHash := make(map[string]typeInfo)
 	for _, info := range infos {
-		if existing, ok := byGT[info.gt]; ok {
+		h := info.hash
+		if existing, ok := byHash[h]; ok {
 			if len(info.path) < len(existing.path) {
-				byGT[info.gt] = info
+				byHash[h] = info
 			}
 			continue
 		}
-		byGT[info.gt] = info
+		byHash[h] = info
 	}
-	out := make([]typeInfo, 0, len(byGT))
-	for _, info := range byGT {
+	out := make([]typeInfo, 0, len(byHash))
+	for _, info := range byHash {
 		out = append(out, info)
 	}
 	return out
@@ -236,7 +242,7 @@ func bestName(infos []typeInfo) string {
 	return candidates[0]
 }
 
-func (n *nameEngine) fixConflicts(candidateTypes []typeInfo) {
+func (n *nameEngine) solveConflcitingNames(candidateTypes []typeInfo) error {
 	maxPathLen := len(candidateTypes[0].path)
 	for _, c := range candidateTypes[1:] {
 		if len(c.path) > maxPathLen {
@@ -267,9 +273,10 @@ func (n *nameEngine) fixConflicts(candidateTypes []typeInfo) {
 			seen[c.gt.Name] = true
 		}
 		if allUnique {
-			return
+			return nil
 		}
 	}
+	return fmt.Errorf("%w: %s", ErrUnresolvedNameCollision, candidateTypes[0].gt.Name)
 }
 
 func hashTypeFast(hashCache map[*GoType]string, gt *GoType) string {
