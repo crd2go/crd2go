@@ -23,7 +23,7 @@ type CustomRole struct {
 
 	Spec CustomRoleSpec `json:"spec,omitempty"`
 
-	Status CustomRoleStatus `json:"status,omitempty"`
+	Status StatusConditions `json:"status,omitempty"`
 }
 
 type CustomRoleSpec struct {

@@ -30,6 +30,10 @@ reserved: []
 renames:
   GroupRef: LocalReference
   ConnectionSecretRef: LocalReference
+  Gcp: CloudProvider
+  Azure: CloudProvider
+  CustomRoleStatus: StatusConditions
+  DatabaseUserStatus: StatusConditions
 
 # imports is a list of types to auto import instead of generating a local type,
 # might need to be used in conjuction with renames to enforce match by name

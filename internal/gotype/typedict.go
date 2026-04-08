@@ -169,7 +169,10 @@ func (td *TypeDict) matchImport(gt *GoType) *config.ImportInfo {
 	if !ok || entry.Kind != AutoImportKind {
 		return nil
 	}
-	entry.CloneStructure(gt)
+	// Copy the auto-import template onto gt (OpenAPI type). Never copy onto entry:
+	// entry.CloneStructure(gt) would replace the preload with StructKind and break
+	// every subsequent matchImport for the same name.
+	gt.CloneStructure(entry)
 	return entry.Import
 }
 

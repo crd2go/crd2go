@@ -20,7 +20,7 @@ type OrganizationSetting struct {
 
 	Spec OrganizationSettingSpec `json:"spec,omitempty"`
 
-	Status CustomRoleStatus `json:"status,omitempty"`
+	Status StatusConditions `json:"status,omitempty"`
 }
 
 type OrganizationSettingSpec struct {

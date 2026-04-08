@@ -45,21 +45,19 @@ var disabledKinds = []string{} // use ito skip problematic CRD kinds temporarily
 var extraReserved = []string{} // use to fix problematic name picks, usually due to skips
 
 func TestGenerateFromCRDs(t *testing.T) {
-	buffers := make(map[string]*bytes.Buffer)
+	// Goldens under internal/testdata/v1 must match repo-root crd2go.yaml (same as
+	// `go run ./cmd/crd2go -config crd2go.yaml`), not a hand-built CoreConfig.
+	cfg := loadGoldenCRD2GoConfig(t)
+	if len(disabledKinds) > 0 {
+		cfg.SkipList = append(append([]string{}, cfg.SkipList...), disabledKinds...)
+	}
 
+	buffers := make(map[string]*bytes.Buffer)
 	in := bytes.NewBuffer(testdata.CRDsYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
-		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
-		CoreConfig: config.CoreConfig{
-			Version:  crd.FirstVersion,
-			SkipList: disabledKinds,
-			Plugins: []config.Plugin{
-				{
-					Name: "get-conditions",
-				},
-			},
-		},
+		TypeDict:     gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...),
+		CoreConfig:   cfg.CoreConfig,
 	}
 	require.NoError(t, Generate(&req, in))
 
@@ -442,6 +440,18 @@ func readTestFile(t *testing.T, filesys fs.FS, path string) string {
 	require.NoError(t, err)
 
 	return string(b)
+}
+
+// loadGoldenCRD2GoConfig loads ../../crd2go.yaml from this package's test working directory.
+func loadGoldenCRD2GoConfig(t *testing.T) *config.Config {
+	t.Helper()
+	p := filepath.Join("..", "..", "crd2go.yaml")
+	f, err := os.Open(p)
+	require.NoError(t, err, "open %s (golden test expects repo crd2go.yaml)", p)
+	defer checkerr.CheckErr("closing crd2go.yaml", f.Close)
+	cfg, err := LoadConfig(f)
+	require.NoError(t, err)
+	return cfg
 }
 
 func BufferForCRD(buffers map[string]*bytes.Buffer) config.CodeWriterFunc {

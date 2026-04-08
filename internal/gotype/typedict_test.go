@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/crd2go/crd2go/pkg/config"
 )
@@ -149,6 +150,38 @@ func TestTypeDict_RegisterAndResolve_WithRenames(t *testing.T) {
 	requireNoErr(t, err)
 
 	assert.Equal(t, "Settings", config.Name)
+}
+
+func TestTypeDict_RegisterAndResolve_MatchImportDoesNotCorruptPreload(t *testing.T) {
+	auto := NewAutoImportType(&config.ImportedTypeConfig{
+		Name: "LocalReference",
+		ImportInfo: config.ImportInfo{
+			Alias: "k8s",
+			Path:  "github.com/crd2go/crd2go/k8s",
+		},
+	})
+	// Two roots with the same OpenAPI shape renamed to LocalReference — both must
+	// keep import info; the preload entry must stay AutoImportKind for every match.
+	gr := func() *GoType {
+		return NewStruct("GroupRef", []*GoField{
+			NewGoField("Name", NewPrimitive("string", StringKind)),
+		})
+	}
+	root1 := NewStruct("R1", []*GoField{NewGoField("Ref", gr())})
+	root2 := NewStruct("R2", []*GoField{NewGoField("Ref", gr())})
+
+	td := NewTypeDict(map[string]string{"GroupRef": "LocalReference"}, auto)
+	err := td.RegisterAndResolve([]*GoType{root1, root2})
+	require.NoError(t, err)
+
+	assert.Equal(t, AutoImportKind, auto.Kind, "preloaded LocalReference must remain AutoImportKind")
+	for _, root := range []*GoType{root1, root2} {
+		ref := root.Fields[0].GoType.BaseType()
+		require.NotNil(t, ref)
+		assert.Equal(t, AutoImportKind, ref.Kind)
+		require.NotNil(t, ref.Import)
+		assert.Equal(t, "k8s", ref.Import.Alias)
+	}
 }
 
 func TestTypeDict_RegisterAndResolve_WithKnownTypes(t *testing.T) {

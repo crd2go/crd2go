@@ -136,8 +136,8 @@ func (gt *GoType) BaseType() *GoType {
 	return gt
 }
 
-// CloneStructure copies the structure of another type,
-// but leaved the name and import info intact
+// CloneStructure replaces the receiver's Kind, Fields, and Element with those of ot.
+// Name and Import on the receiver are left unchanged.
 func (gt *GoType) CloneStructure(ot *GoType) {
 	gt.Kind = ot.Kind
 	gt.Fields = ot.Fields
