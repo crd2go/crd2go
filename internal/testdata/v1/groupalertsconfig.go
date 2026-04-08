@@ -128,7 +128,7 @@ type Notifications struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	ApiTokenSecretRef *UrlSecretRef `json:"apiTokenSecretRef,omitempty"`
+	ApiTokenSecretRef *NamedKeySecretRef `json:"apiTokenSecretRef,omitempty"`
 
 	// ChannelName Name of the Slack channel to which MongoDB Cloud sends alert
 	// notifications. The resource requires this parameter when
@@ -148,7 +148,7 @@ type Notifications struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	DatadogApiKeySecretRef *UrlSecretRef `json:"datadogApiKeySecretRef,omitempty"`
+	DatadogApiKeySecretRef *NamedKeySecretRef `json:"datadogApiKeySecretRef,omitempty"`
 
 	// DatadogRegion Datadog region that indicates which API Uniform Resource Locator
 	// (URL) to use. The resource requires this parameter when
@@ -200,7 +200,7 @@ type Notifications struct {
 
 	   **NOTE**: When you view or edit the alert for a Microsoft Teams notification, the URL appears partially redacted.
 	*/
-	MicrosoftTeamsWebhookUrlSecretRef *UrlSecretRef `json:"microsoftTeamsWebhookUrlSecretRef,omitempty"`
+	MicrosoftTeamsWebhookUrlSecretRef *NamedKeySecretRef `json:"microsoftTeamsWebhookUrlSecretRef,omitempty"`
 
 	// MobileNumber Mobile phone number to which MongoDB Cloud sends alert
 	// notifications. The resource requires this parameter when
@@ -220,7 +220,7 @@ type Notifications struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	NotificationTokenSecretRef *UrlSecretRef `json:"notificationTokenSecretRef,omitempty"`
+	NotificationTokenSecretRef *NamedKeySecretRef `json:"notificationTokenSecretRef,omitempty"`
 
 	// NotifierId The notifierId is a system-generated unique identifier assigned to
 	// each notification method. This is needed when updating third-party notifications
@@ -240,7 +240,7 @@ type Notifications struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	OpsGenieApiKeySecretRef *UrlSecretRef `json:"opsGenieApiKeySecretRef,omitempty"`
+	OpsGenieApiKeySecretRef *NamedKeySecretRef `json:"opsGenieApiKeySecretRef,omitempty"`
 
 	// OpsGenieRegion Opsgenie region that indicates which API Uniform Resource Locator
 	// (URL) to use.
@@ -276,7 +276,7 @@ type Notifications struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	ServiceKeySecretRef *UrlSecretRef `json:"serviceKeySecretRef,omitempty"`
+	ServiceKeySecretRef *NamedKeySecretRef `json:"serviceKeySecretRef,omitempty"`
 
 	/*
 	   SmsEnabled Flag that indicates whether MongoDB Cloud should send text message notifications. The resource requires this parameter when one of the following values have been set:
@@ -318,7 +318,7 @@ type Notifications struct {
 
 	   * Query the alert for the notification through the Atlas Administration API.
 	*/
-	VictorOpsApiKeySecretRef *UrlSecretRef `json:"victorOpsApiKeySecretRef,omitempty"`
+	VictorOpsApiKeySecretRef *NamedKeySecretRef `json:"victorOpsApiKeySecretRef,omitempty"`
 
 	/*
 	   VictorOpsRoutingKeySecretRef SENSITIVE FIELD
@@ -327,7 +327,7 @@ type Notifications struct {
 
 	   Routing key that MongoDB Cloud needs to send alert notifications to Splunk On-Call. The resource requires this parameter when `"notifications.[n].typeName" : "VICTOR_OPS"`. If the key later becomes invalid, MongoDB Cloud sends an email to the project owners. If the key remains invalid, MongoDB Cloud removes it.
 	*/
-	VictorOpsRoutingKeySecretRef *UrlSecretRef `json:"victorOpsRoutingKeySecretRef,omitempty"`
+	VictorOpsRoutingKeySecretRef *NamedKeySecretRef `json:"victorOpsRoutingKeySecretRef,omitempty"`
 
 	/*
 	   WebhookSecretSecretRef SENSITIVE FIELD
@@ -342,7 +342,7 @@ type Notifications struct {
 
 	   **NOTE**: When you view or edit the alert for a webhook notification, the secret appears completely redacted.
 	*/
-	WebhookSecretSecretRef *UrlSecretRef `json:"webhookSecretSecretRef,omitempty"`
+	WebhookSecretSecretRef *NamedKeySecretRef `json:"webhookSecretSecretRef,omitempty"`
 
 	/*
 	   WebhookUrlSecretRef SENSITIVE FIELD
@@ -357,10 +357,10 @@ type Notifications struct {
 
 	   **NOTE**: When you view or edit the alert for a Webhook URL notification, the URL appears partially redacted.
 	*/
-	WebhookUrlSecretRef *UrlSecretRef `json:"webhookUrlSecretRef,omitempty"`
+	WebhookUrlSecretRef *NamedKeySecretRef `json:"webhookUrlSecretRef,omitempty"`
 }
 
-type UrlSecretRef struct {
+type NamedKeySecretRef struct {
 	// Key Key of the secret data containing the sensitive field value, defaults to
 	// "apiToken".
 	Key *string `json:"key,omitempty"`
