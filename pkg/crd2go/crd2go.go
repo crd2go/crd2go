@@ -82,14 +82,22 @@ func CodeWriterAtPath(dir string) config.CodeWriterFunc {
 
 // GenerateToDir generates Go code from a CRD YAML file into a directory
 func GenerateToDir(cfg *config.Config) error {
+	if cfg.Output == "" {
+		return fmt.Errorf("output directory is required")
+	}
+	existing, err := gotype.ScanExistingStructNames(cfg.Output)
+	if err != nil {
+		return fmt.Errorf("scan package for naming stability: %w", err)
+	}
 	in, err := os.Open(cfg.Input)
 	if err != nil {
 		return fmt.Errorf("failed to open input file %s: %w", cfg.Input, err)
 	}
+	td := gotype.NewTypeDict(cfg.Renames, existing, gotype.KnownTypes()...)
 	req := gotype.Request{
 		CoreConfig:   cfg.CoreConfig,
 		CodeWriterFn: CodeWriterAtPath(cfg.Output),
-		TypeDict:     gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...),
+		TypeDict:     td,
 	}
 	if err := Generate(&req, in); err != nil {
 		return fmt.Errorf("failed to generate CRD code: %w", err)

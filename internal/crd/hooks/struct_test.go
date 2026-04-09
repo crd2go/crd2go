@@ -119,7 +119,7 @@ func TestStructHookFn(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			td := gotype.NewTypeDict(map[string]string{"Struct": "Data"}, gotype.KnownTypes()...)
+			td := gotype.NewTypeDict(map[string]string{"Struct": "Data"}, nil, gotype.KnownTypes()...)
 			td.AddAll(
 				gotype.NewPrimitive("Data", gotype.StringKind),
 				gotype.NewPrimitive("ObjectData", gotype.StringKind),

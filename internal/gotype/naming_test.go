@@ -163,6 +163,19 @@ func TestHashType_Comparison_DifferentFieldTypes(t *testing.T) {
 	assert.Equal(t, "sha256:6289d5681e93ea53dd9a075241495a10474fb579fda376f637fd26c35a9d447a", hash2)
 }
 
+func TestShouldFreezeConflictCandidate(t *testing.T) {
+	n := NewNameEngine().(*nameEngine)
+	n.existingNames = map[string]map[string]struct{}{
+		"team": {"TeamSpec": {}},
+	}
+	c := typeInfo{path: []string{"Team", "Spec"}, gt: NewStruct("TeamSpec", nil)}
+	assert.True(t, n.shouldFreezeConflictCandidate(c))
+	c = typeInfo{path: []string{"Team", "Spec"}, gt: NewStruct("Other", nil)}
+	assert.False(t, n.shouldFreezeConflictCandidate(c))
+	c = typeInfo{path: []string{"cluster", "Spec"}, gt: NewStruct("TeamSpec", nil)}
+	assert.False(t, n.shouldFreezeConflictCandidate(c))
+}
+
 func TestUniqueTypes_sameHashDistinctPointers(t *testing.T) {
 	c1 := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
 	c2 := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})

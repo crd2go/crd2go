@@ -136,7 +136,7 @@ func TestRenameType(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			td := gotype.NewTypeDict(nil, tc.preloaded...)
+			td := gotype.NewTypeDict(nil, nil, tc.preloaded...)
 			root := gotype.NewStruct("Group", []*gotype.GoField{tc.input})
 			err := td.RegisterAndResolve([]*gotype.GoType{root})
 			require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestRenameType(t *testing.T) {
 }
 
 func TestBuildOpenAPIType(t *testing.T) {
-	td := gotype.NewTypeDict(nil, CrossReference(), LocalReference())
+	td := gotype.NewTypeDict(nil, nil, CrossReference(), LocalReference())
 	crdRootType := &crd.CRDType{
 		Name:    "RootType",
 		Parents: []string{},
@@ -238,7 +238,7 @@ func TestBuildOpenAPIType(t *testing.T) {
 }
 
 func TestBuiltInFormat2Type(t *testing.T) {
-	td := gotype.NewTypeDict(nil, gotype.KnownTypes()...)
+	td := gotype.NewTypeDict(nil, nil, gotype.KnownTypes()...)
 	crdTimeType := &crd.CRDType{
 		Name:    "time",
 		Parents: []string{},
@@ -269,7 +269,7 @@ func TestConditionsMatch(t *testing.T) {
 	}{
 		{
 			title: "match conditions with a known type",
-			td:    gotype.NewTypeDict(nil, gotype.KnownTypes()...),
+			td:    gotype.NewTypeDict(nil, nil, gotype.KnownTypes()...),
 		},
 		{
 			title:             "match conditions with renames and imports",
@@ -278,6 +278,7 @@ func TestConditionsMatch(t *testing.T) {
 				map[string]string{
 					"Cond": "Condition",
 				},
+				nil,
 				gotype.NewAutoImportType(&config.ImportedTypeConfig{
 					Name: "Condition",
 					ImportInfo: config.ImportInfo{

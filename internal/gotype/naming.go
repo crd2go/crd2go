@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 var ErrUnresolvedNameCollision = errors.New("could not assign distinct Go names to colliding types")
@@ -90,10 +91,11 @@ type typeInfo struct {
 }
 
 type nameEngine struct {
-	byHash    map[string][]typeInfo
-	hashCache map[*GoType]string
-	roots     []*GoType
-	byName    map[string]*GoType
+	byHash        map[string][]typeInfo
+	hashCache     map[*GoType]string
+	roots         []*GoType
+	byName        map[string]*GoType
+	existingNames map[string]map[string]struct{}
 }
 
 func NewNameEngine() NameEngine {
@@ -256,6 +258,9 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	for round := 1; round <= maxRounds; round++ {
 		for i := range candidateTypes {
 			c := &candidateTypes[i]
+			if n.shouldFreezeConflictCandidate(*c) {
+				continue
+			}
 			if round <= len(c.path)-1 {
 				idx := len(c.path) - 1 - round
 				c.gt.Name = c.path[idx] + c.gt.Name
@@ -275,6 +280,19 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 		}
 	}
 	return fmt.Errorf("%w: %s", ErrUnresolvedNameCollision, candidateTypes[0].gt.Name)
+}
+
+func (n *nameEngine) shouldFreezeConflictCandidate(c typeInfo) bool {
+	if len(n.existingNames) == 0 || len(c.path) == 0 {
+		return false
+	}
+	stem := strings.ToLower(c.path[0])
+	fileTypes, ok := n.existingNames[stem]
+	if !ok {
+		return false
+	}
+	_, found := fileTypes[c.gt.Name]
+	return found
 }
 
 func hashTypeFast(hashCache map[*GoType]string, gt *GoType) string {
