@@ -99,7 +99,9 @@ func (td *TypeDict) WasGenerated(gt *GoType) bool {
 func (td *TypeDict) RegisterAndResolve(roots []*GoType) error {
 	for _, gt := range td.knownTypes {
 		if gt.Kind != AutoImportKind {
-			_ = td.nameEngine.Register([]string{gt.Name}, gt)
+			if err := td.nameEngine.Register([]string{gt.Name}, gt); err != nil {
+				return fmt.Errorf("failed to register type %s: %w", gt.Name, err)
+			}
 		}
 	}
 	for _, root := range roots {
