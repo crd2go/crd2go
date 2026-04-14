@@ -23,6 +23,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestScanStructFields(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "widget.go"), []byte(`package x
+
+type Widget struct {
+	Name  string
+	Count int
+	Tags  []string
+}
+
+type Other struct{ X int }
+`), 0o644))
+
+	fields, err := ScanStructFields(dir, "widget.go", "Widget")
+	require.NoError(t, err)
+	require.Equal(t, []string{"Name", "Count", "Tags"}, fields)
+
+	fields, err = ScanStructFields(dir, "widget.go", "Other")
+	require.NoError(t, err)
+	require.Equal(t, []string{"X"}, fields)
+
+	fields, err = ScanStructFields(dir, "widget.go", "Missing")
+	require.NoError(t, err)
+	require.Nil(t, fields)
+}
+
 func TestScanExistingStructNames(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "widget.go"), []byte(`package x

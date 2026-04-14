@@ -114,3 +114,39 @@ func topLevelStructTypeNames(filePath string) ([]string, error) {
 	}
 	return names, nil
 }
+
+// ScanStructFields parses the file at filepath.Join(dir, filename) and returns
+// the ordered list of field names for the named struct. Returns nil if the
+// struct is not found in the file.
+func ScanStructFields(dir, filename, typeName string) ([]string, error) {
+	filePath := filepath.Join(dir, filename)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, filePath, nil, 0)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", filePath, err)
+	}
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok || ts.Name == nil || ts.Name.Name != typeName {
+				continue
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok {
+				continue
+			}
+			var fields []string
+			for _, field := range st.Fields.List {
+				for _, name := range field.Names {
+					fields = append(fields, name.Name)
+				}
+			}
+			return fields, nil
+		}
+	}
+	return nil, nil
+}
