@@ -87,7 +87,7 @@ func TestDictHookFn(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			td := gotype.NewTypeDict(nil, nil, gotype.KnownTypes()...)
+			td := gotype.NewTypeDict(nil, gotype.KnownTypes()...)
 			got, err := DictHookFn(td, tt.hooks, tt.crdType)
 			assert.Equal(t, tt.expectedErr, err)
 			assert.Equal(t, tt.expectedType, got)

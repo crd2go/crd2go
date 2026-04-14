@@ -41,29 +41,21 @@ type Request struct {
 	TypeDict     *TypeDict
 }
 
-// NewTypeDict creates a new TypeDict with renames, optional on-disk struct names
-// for naming stability (see ScanExistingStructNames keys), and preloaded types.
-// Pass nil for byFileStem when not freezing names from existing .go files.
-func NewTypeDict(renames map[string]string, byFileStem map[string]map[string]struct{}, goTypes ...*GoType) *TypeDict {
+// NewTypeDict creates a new TypeDict with renames and preloaded types.
+func NewTypeDict(renames map[string]string, goTypes ...*GoType) *TypeDict {
 	knownTypes := make(map[string]*GoType)
 	knownByHash := make(map[string]*GoType)
 	for _, gt := range goTypes {
 		knownTypes[gt.Name] = gt
 		knownByHash[HashType(gt)] = gt
 	}
-	td := &TypeDict{
+	return &TypeDict{
 		nameEngine:  NewNameEngine(),
 		knownTypes:  knownTypes,
 		knownByHash: knownByHash,
 		renames:     renames,
 		generated:   make(map[string]bool),
 	}
-	if byFileStem != nil {
-		if ne, ok := td.nameEngine.(*nameEngine); ok {
-			ne.existingNames = byFileStem
-		}
-	}
-	return td
 }
 
 // Has checks if the TypeDict contains a GoType with the same structure (via NameEngine).

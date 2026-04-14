@@ -122,7 +122,7 @@ func TestArrayHookFn(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			td := gotype.NewTypeDict(map[string]string{"Object": "Data"}, nil, gotype.KnownTypes()...)
+			td := gotype.NewTypeDict(map[string]string{"Object": "Data"}, gotype.KnownTypes()...)
 			td.AddAll(
 				gotype.NewStruct("Data", []*gotype.GoField{}),
 				gotype.NewStruct("Parent", []*gotype.GoField{}),
