@@ -29,20 +29,22 @@ import (
 
 func main() {
 	var input, output, gv, config string
+	var forceRenames bool
 	flag.StringVar(&input, "input", "", "input YAML to process")
 	flag.StringVar(&output, "output", "", "output directory to produce source code to")
 	flag.StringVar(&config, "config", "crd2go.yaml", "YAML file with the CRD2Go config")
 	flag.StringVar(&gv, "gv", "", "Group Version (e.g 'gen.example.com/v1') to generate from.")
+	flag.BoolVar(&forceRenames, "force-renames", false, "allow crd2go to rename existing types when conflicts arise")
 	flag.Parse()
 
-	cfg, err := generate(input, output, gv, config)
+	cfg, err := generate(input, output, gv, config, forceRenames)
 	if err != nil {
 		log.Fatalf("Failed to generate go structs: %v", err)
 	}
 	log.Printf("Code generated at %s", cfg.Output)
 }
 
-func generate(input, output, gv, config string) (*config.Config, error) {
+func generate(input, output, gv, config string, forceRenames bool) (*config.Config, error) {
 	f, err := os.Open(fileinput.MustBeSafe(config))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open configuration file: %w", err)
@@ -58,6 +60,7 @@ func generate(input, output, gv, config string) (*config.Config, error) {
 	if output != "" {
 		cfg.Output = output
 	}
+	cfg.ForceRenames = forceRenames
 	if _, _, err := crd2go.ParseGroupVersion(gv); err != nil {
 		return nil, fmt.Errorf("failed to parse gv: %w", err)
 	}

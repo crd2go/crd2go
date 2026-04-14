@@ -85,15 +85,18 @@ func GenerateToDir(cfg *config.Config) error {
 	if cfg.Output == "" {
 		return fmt.Errorf("output directory is required")
 	}
-	existing, err := gotype.ScanExistingStructNames(cfg.Output)
-	if err != nil {
-		return fmt.Errorf("scan package for existing type names: %w", err)
+	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...)
+	if !cfg.ForceRenames {
+		existing, err := gotype.ScanExistingStructNames(cfg.Output)
+		if err != nil {
+			return fmt.Errorf("scan package for existing type names: %w", err)
+		}
+		td.WithExistingNames(existing)
 	}
 	in, err := os.Open(cfg.Input)
 	if err != nil {
 		return fmt.Errorf("failed to open input file %s: %w", cfg.Input, err)
 	}
-	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...).WithExistingNames(existing)
 	req := gotype.Request{
 		CoreConfig:   cfg.CoreConfig,
 		CodeWriterFn: CodeWriterAtPath(cfg.Output),
@@ -102,7 +105,8 @@ func GenerateToDir(cfg *config.Config) error {
 	if err := Generate(&req, in); err != nil {
 		var conflictErr *gotype.ExistingNameConflictError
 		if errors.As(err, &conflictErr) {
-			fmt.Println("conflicting names found with existing type names, please use these pinnings in the config to fix:\n")
+			fmt.Println("conflicting names found with existing type names, please use these pinnings in the config to fix:")
+			fmt.Println()
 			fmt.Print(conflictErr.Error())
 			fmt.Println("\nOr use flag --force-renames to allow crd2go to rename existing types as needed.")
 			return fmt.Errorf("aborting: resolve the conflicts above before generating code")

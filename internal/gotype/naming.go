@@ -126,7 +126,7 @@ type nameEngine struct {
 	hashCache        map[*GoType]string
 	roots            []*GoType
 	byName           map[string]*GoType
-	existingNames    map[string]string         // typename → file path
+	existingNames    map[string]string // typename → file path
 	pendingConflicts []ExistingNameConflict
 }
 
