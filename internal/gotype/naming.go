@@ -142,7 +142,7 @@ func (n *nameEngine) NamedRoots() ([]*GoType, error) {
 		if len(conflictingTypes) <= 1 {
 			continue
 		}
-		if err := n.solveConflcitingNames(conflictingTypes); err != nil {
+		if err := n.solveConflictingNames(conflictingTypes); err != nil {
 			return nil, err
 		}
 	}
@@ -242,7 +242,7 @@ func bestName(infos []typeInfo) string {
 	return candidates[0]
 }
 
-func (n *nameEngine) solveConflcitingNames(candidateTypes []typeInfo) error {
+func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	maxPathLen := len(candidateTypes[0].path)
 	for _, c := range candidateTypes[1:] {
 		if len(c.path) > maxPathLen {
