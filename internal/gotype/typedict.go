@@ -70,6 +70,23 @@ func (td *TypeDict) WithExistingNames(existing map[string]string) *TypeDict {
 	return td
 }
 
+// WithPinnings registers the given dot-separated type paths as pinned, preventing
+// them from being renamed during conflict resolution.
+// Returns the receiver for chaining.
+func (td *TypeDict) WithPinnings(pinnings []string) *TypeDict {
+	if len(pinnings) == 0 {
+		return td
+	}
+	pinned := make(map[string]bool, len(pinnings))
+	for _, p := range pinnings {
+		pinned[p] = true
+	}
+	if ne, ok := td.nameEngine.(*nameEngine); ok {
+		ne.pinnedPaths = pinned
+	}
+	return td
+}
+
 // Has checks if the TypeDict contains a GoType with the same structure (via NameEngine).
 func (td *TypeDict) Has(gt *GoType) bool {
 	return td.nameEngine.Has(gt)

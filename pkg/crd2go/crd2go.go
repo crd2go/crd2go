@@ -85,7 +85,7 @@ func GenerateToDir(cfg *config.Config) error {
 	if cfg.Output == "" {
 		return fmt.Errorf("output directory is required")
 	}
-	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...)
+	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...).WithPinnings(cfg.Pinnings)
 	if !cfg.ForceRenames {
 		existing, err := gotype.ScanExistingStructNames(cfg.Output)
 		if err != nil {

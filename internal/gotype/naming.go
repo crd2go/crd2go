@@ -127,6 +127,7 @@ type nameEngine struct {
 	roots            []*GoType
 	byName           map[string]*GoType
 	existingNames    map[string]string // typename → file path
+	pinnedPaths      map[string]bool   // dot-joined paths that must not be renamed
 	pendingConflicts []ExistingNameConflict
 }
 
@@ -285,7 +286,14 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	if recorded {
 		return nil
 	}
+	return n.prependPaths(candidateTypes)
+}
 
+// prependPaths resolves name conflicts by prepending ancestor path segments to each
+// candidate's name until all names are unique. A pinned candidate, if any, is skipped
+// so its name is never modified.
+func (n *nameEngine) prependPaths(candidateTypes []typeInfo) error {
+	frozenIdx := n.findPinnedCandidate(candidateTypes)
 	maxPathLen := len(candidateTypes[0].path)
 	for _, c := range candidateTypes[1:] {
 		if len(c.path) > maxPathLen {
@@ -300,6 +308,9 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	// Prepend from immediate parent toward root (leaf-to-root) to match legacy behavior.
 	for round := 1; round <= maxRounds; round++ {
 		for i := range candidateTypes {
+			if i == frozenIdx {
+				continue
+			}
 			c := &candidateTypes[i]
 			if round <= len(c.path)-1 {
 				idx := len(c.path) - 1 - round
@@ -322,10 +333,22 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	return fmt.Errorf("%w: %s", ErrUnresolvedNameCollision, candidateTypes[0].gt.Name)
 }
 
+func (n *nameEngine) findPinnedCandidate(candidates []typeInfo) int {
+	for i, c := range candidates {
+		if n.pinnedPaths[strings.Join(c.path, ".")] {
+			return i
+		}
+	}
+	return -1
+}
+
 func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) (bool, error) {
 	naturalName := candidateTypes[0].gt.Name
 	file, exists := n.existingNames[naturalName]
 	if !exists {
+		return false, nil
+	}
+	if n.findPinnedCandidate(candidateTypes) >= 0 {
 		return false, nil
 	}
 	narrowed, err := narrowCandidates(file, naturalName, candidateTypes)
