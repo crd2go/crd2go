@@ -36,15 +36,17 @@ type Widget struct {
 type Other struct{ X int }
 `), 0o644))
 
-	fields, err := ScanStructFields(dir, "widget.go", "Widget")
+	widgetFile := filepath.Join(dir, "widget.go")
+
+	fields, err := ScanStructFields(widgetFile, "Widget")
 	require.NoError(t, err)
 	require.Equal(t, []string{"Name", "Count", "Tags"}, fields)
 
-	fields, err = ScanStructFields(dir, "widget.go", "Other")
+	fields, err = ScanStructFields(widgetFile, "Other")
 	require.NoError(t, err)
 	require.Equal(t, []string{"X"}, fields)
 
-	fields, err = ScanStructFields(dir, "widget.go", "Missing")
+	fields, err = ScanStructFields(widgetFile, "Missing")
 	require.NoError(t, err)
 	require.Nil(t, fields)
 }

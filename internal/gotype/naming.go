@@ -278,7 +278,11 @@ func bestName(infos []typeInfo) string {
 }
 
 func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
-	if n.isExistingNameConflict(candidateTypes) {
+	recorded, err := n.isExistingNameConflict(candidateTypes)
+	if err != nil {
+		return err
+	}
+	if recorded {
 		return nil
 	}
 
@@ -318,14 +322,18 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	return fmt.Errorf("%w: %s", ErrUnresolvedNameCollision, candidateTypes[0].gt.Name)
 }
 
-func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) bool {
+func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) (bool, error) {
 	naturalName := candidateTypes[0].gt.Name
 	file, exists := n.existingNames[naturalName]
 	if !exists {
-		return false
+		return false, nil
 	}
-	paths := make([][]string, len(candidateTypes))
-	for i, c := range candidateTypes {
+	narrowed, err := narrowCandidates(file, naturalName, candidateTypes)
+	if err != nil {
+		return false, err
+	}
+	paths := make([][]string, len(narrowed))
+	for i, c := range narrowed {
 		paths[i] = c.path
 	}
 	n.pendingConflicts = append(n.pendingConflicts, ExistingNameConflict{
@@ -333,6 +341,44 @@ func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) bool {
 		ExistingFile: file,
 		Candidates:   paths,
 	})
+	return true, nil
+}
+
+// narrowCandidates attempts to identify which candidate matches the existing on-disk
+// struct by comparing field names in order. If exactly one candidate matches, only
+// that candidate is returned. Otherwise all candidates are returned unchanged.
+func narrowCandidates(filePath, typeName string, candidates []typeInfo) ([]typeInfo, error) {
+	existingFields, err := ScanStructFields(filePath, typeName)
+	if err != nil {
+		return nil, fmt.Errorf("scanning fields of existing type %q in %s: %w", typeName, filePath, err)
+	}
+	var matches []typeInfo
+	for _, c := range candidates {
+		if goTypeFieldsMatch(c.gt, existingFields) {
+			matches = append(matches, c)
+		}
+	}
+	if len(matches) == 1 {
+		return matches, nil
+	}
+	return candidates, nil
+}
+
+func goTypeFieldsMatch(gt *GoType, existingFields []string) bool {
+	var names []string
+	for _, f := range gt.Fields {
+		if !f.IsEmbedded() {
+			names = append(names, f.Name)
+		}
+	}
+	if len(names) != len(existingFields) {
+		return false
+	}
+	for i, name := range names {
+		if name != existingFields[i] {
+			return false
+		}
+	}
 	return true
 }
 

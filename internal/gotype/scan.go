@@ -115,11 +115,9 @@ func topLevelStructTypeNames(filePath string) ([]string, error) {
 	return names, nil
 }
 
-// ScanStructFields parses the file at filepath.Join(dir, filename) and returns
-// the ordered list of field names for the named struct. Returns nil if the
-// struct is not found in the file.
-func ScanStructFields(dir, filename, typeName string) ([]string, error) {
-	filePath := filepath.Join(dir, filename)
+// ScanStructFields parses filePath and returns the ordered list of field names
+// for the named struct. Returns nil if the struct is not found in the file.
+func ScanStructFields(filePath, typeName string) ([]string, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filePath, nil, 0)
 	if err != nil {
