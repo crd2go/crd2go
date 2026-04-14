@@ -64,6 +64,9 @@ func NewTypeDict(renames map[string]string, goTypes ...*GoType) *TypeDict {
 // Returns the receiver for chaining.
 func (td *TypeDict) WithExistingNames(existing map[string]string) *TypeDict {
 	td.existingNames = existing
+	if ne, ok := td.nameEngine.(*nameEngine); ok {
+		ne.existingNames = existing
+	}
 	return td
 }
 
