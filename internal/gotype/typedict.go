@@ -26,10 +26,11 @@ import (
 // It embeds a NameEngine for naming and deduplication, and separately tracks which
 // types have already been emitted during generation (render).
 type TypeDict struct {
-	nameEngine  NameEngine
-	knownTypes  map[string]*GoType
-	knownByHash map[string]*GoType
-	renames     map[string]string
+	nameEngine    NameEngine
+	knownTypes    map[string]*GoType
+	knownByHash   map[string]*GoType
+	renames       map[string]string
+	existingNames map[string]string // typename → file path, from ScanExistingStructNames
 	// generated records type names that have been rendered (keyed by final Go type name).
 	generated map[string]bool
 }
@@ -56,6 +57,14 @@ func NewTypeDict(renames map[string]string, goTypes ...*GoType) *TypeDict {
 		renames:     renames,
 		generated:   make(map[string]bool),
 	}
+}
+
+// WithExistingNames attaches a map of existing on-disk type names (typename → file path,
+// as returned by ScanExistingStructNames) for use during conflict detection.
+// Returns the receiver for chaining.
+func (td *TypeDict) WithExistingNames(existing map[string]string) *TypeDict {
+	td.existingNames = existing
+	return td
 }
 
 // Has checks if the TypeDict contains a GoType with the same structure (via NameEngine).
