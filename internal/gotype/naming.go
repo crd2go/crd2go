@@ -188,6 +188,7 @@ func (n *nameEngine) solveTypeAliases() map[string][]typeInfo {
 			}
 			byName[info.gt.Name] = append(byName[info.gt.Name], info)
 		}
+		// safe to update while in range. See https://go.dev/ref/spec#For_range
 		n.byHash[hash] = []typeInfo{infos[0]}
 	}
 	return byName
