@@ -38,10 +38,7 @@ type DocIgnored struct{}
 
 	got, err := ScanExistingStructNames(dir)
 	require.NoError(t, err)
-	_, ok := got["widget"]["Widget"]
-	require.True(t, ok)
-	_, ok = got["gadget"]["Gadget"]
-	require.True(t, ok)
-	_, ok = got["doc"]["DocIgnored"]
-	require.False(t, ok)
+	require.Equal(t, filepath.Join(dir, "widget.go"), got["Widget"])
+	require.Equal(t, filepath.Join(dir, "gadget.go"), got["Gadget"])
+	require.Empty(t, got["DocIgnored"])
 }

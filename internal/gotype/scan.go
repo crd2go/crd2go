@@ -27,14 +27,11 @@ import (
 )
 
 // ScanExistingStructNames walks dir for *.go files (excluding generated / meta files),
-// parses each file, and returns a map from lowercased file stem (as in Kind2Filename)
-// to the set of top-level struct type names declared in that file.
-//
-// The stem key matches strings.ToLower(kind) for CRD kind "Kind" emitted as kind.go,
-// so it aligns with name-engine path[0] after lowercasing.
+// parses each file, and returns a map from top-level struct type name to the file path
+// where it is declared.
 //
 // If dir is empty or does not exist, returns (nil, nil).
-func ScanExistingStructNames(dir string) (map[string]map[string]struct{}, error) {
+func ScanExistingStructNames(dir string) (map[string]string, error) {
 	if dir == "" {
 		return nil, nil
 	}
@@ -48,7 +45,7 @@ func ScanExistingStructNames(dir string) (map[string]map[string]struct{}, error)
 	if !st.IsDir() {
 		return nil, fmt.Errorf("naming stability scan path is not a directory: %s", dir)
 	}
-	out := make(map[string]map[string]struct{})
+	out := make(map[string]string)
 	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -63,19 +60,12 @@ func ScanExistingStructNames(dir string) (map[string]map[string]struct{}, error)
 		if skipNamingScanFile(base) {
 			return nil
 		}
-		stemKey := strings.TrimSuffix(strings.ToLower(base), ".go")
 		names, perr := topLevelStructTypeNames(path)
 		if perr != nil {
 			return perr
 		}
-		if len(names) == 0 {
-			return nil
-		}
-		if out[stemKey] == nil {
-			out[stemKey] = make(map[string]struct{}, len(names))
-		}
 		for _, n := range names {
-			out[stemKey][n] = struct{}{}
+			out[n] = path
 		}
 		return nil
 	})
