@@ -58,9 +58,6 @@ func HashType(gt *GoType) string {
 		}
 		return fmt.Sprintf("map:%s", HashType(gt.Element))
 	default:
-		if gt.IsPrimitive() {
-			return gt.Kind
-		}
 		return gt.Kind
 	}
 }
