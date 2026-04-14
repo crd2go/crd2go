@@ -32,12 +32,7 @@ func HashType(gt *GoType) string {
 		return ""
 	}
 	switch gt.Kind {
-	case OpaqueKind:
-		if gt.Import != nil {
-			return fmt.Sprintf("%s.%s", gt.Import.Path, gt.Name)
-		}
-		return gt.Name
-	case AutoImportKind:
+	case OpaqueKind, AutoImportKind:
 		if gt.Import != nil {
 			return fmt.Sprintf("%s.%s", gt.Import.Path, gt.Name)
 		}
