@@ -70,8 +70,10 @@ type NameEngine interface {
 	Register(path []string, gt *GoType) error
 
 	// NamedRoots returns the named roots and applies final names to all registered types.
-	// All types are uniquely and deterministically named with the shortest possible name.
-	// Collisions are resolved by prepending parent path segments.
+	// Names are unique and deterministic. Among types with the same structure (aliases), the
+	// shortest name wins. When different types would share the same Go identifier, ancestor
+	// path segments are prepended (immediate parent first, then toward the root) until names
+	// differ; those disambiguated names are not guaranteed to be the shortest possible.
 	NamedRoots() ([]*GoType, error)
 
 	// Has returns true if a type with the same structure (hash) was registered.

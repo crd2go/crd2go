@@ -102,3 +102,9 @@ Anything under the module that contains `.go` files is a real package: **`go tes
 **Practical rule:** put throwaway output **outside** the repo or on a **`gitignore`d** path, or remove the directory before running full-tree tests—one half-generated folder is enough to break CI.
 
 Committed trees such as **`internal/testdata/v1`** are different: they are meant to stay complete and in sync with the tests.
+
+## Naming
+
+crd2go assigns each generated struct a Go name from the CRD shape. Types that are structurally identical share one name; among the candidate spellings, the shortest wins.
+
+If two different shapes would use the same name, the generator prepends pieces of the field path from the nested type up toward the root—one segment per pass—until every name is unique. That rule is deterministic and always produces valid Go, but it does not minimize name length in every case (shared path segments can add extra prefixes before types diverge). User **`renames`** and **`imports`** still override or replace generated names where you need something explicit.
