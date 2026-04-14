@@ -65,7 +65,7 @@ type SearchIndexSpecV20250312Entry struct {
 	// create an Atlas Search index in.
 	Database string `json:"database"`
 
-	Definition *Definition `json:"definition,omitempty"`
+	Definition *EntryDefinition `json:"definition,omitempty"`
 
 	// Name Label that identifies this index. Within each namespace, names of all
 	// indexes in the namespace must be unique.
@@ -75,7 +75,7 @@ type SearchIndexSpecV20250312Entry struct {
 	Type *string `json:"type,omitempty"`
 }
 
-type Definition struct {
+type EntryDefinition struct {
 	/*
 	   Analyzer Specific pre-defined method chosen to convert database field text into searchable words. This conversion reduces the text of fields into the smallest units of text. These units are called a **term** or **token**. This process, known as tokenization, involves making the following changes to the text in fields:
 
@@ -200,7 +200,7 @@ type SearchIndexStatusV20250312 struct {
 
 	// LatestDefinitionVersion Object which includes the version number of the index
 	// definition and the time that the index definition was created.
-	LatestDefinitionVersion *LatestDefinitionVersion `json:"latestDefinitionVersion,omitempty"`
+	LatestDefinitionVersion *DefinitionVersion `json:"latestDefinitionVersion,omitempty"`
 
 	// Name Label that identifies this index. Within each namespace, the names of all
 	// indexes must be unique.
@@ -237,7 +237,7 @@ type SearchIndexStatusV20250312 struct {
 	Type *string `json:"type,omitempty"`
 }
 
-type LatestDefinitionVersion struct {
+type DefinitionVersion struct {
 	// CreatedAt The time at which this index definition was created. This parameter
 	// expresses its value in the ISO 8601 timestamp format in UTC.
 	CreatedAt *string `json:"createdAt,omitempty"`
@@ -279,7 +279,7 @@ type MainIndex struct {
 
 	// DefinitionVersion Object which includes the version number of the index
 	// definition and the time that the index definition was created.
-	DefinitionVersion *LatestDefinitionVersion `json:"definitionVersion,omitempty"`
+	DefinitionVersion *DefinitionVersion `json:"definitionVersion,omitempty"`
 
 	// Message Optional message describing an error.
 	Message *string `json:"message,omitempty"`

@@ -20,7 +20,7 @@ type OrganizationSetting struct {
 
 	Spec OrganizationSettingSpec `json:"spec,omitempty"`
 
-	Status OrganizationSettingStatus `json:"status,omitempty"`
+	Status StatusConditions `json:"status,omitempty"`
 }
 
 type OrganizationSettingSpec struct {
@@ -82,12 +82,6 @@ type OrganizationSettingSpecV20250312Entry struct {
 	// Processing instances in this organization can create connections to other
 	// group's clusters in the same organization.
 	StreamsCrossGroupEnabled *bool `json:"streamsCrossGroupEnabled,omitempty"`
-}
-
-type OrganizationSettingStatus struct {
-	// Conditions Represents the latest available observations of a resource's current
-	// state.
-	Conditions *[]metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -35,7 +35,6 @@ func TestRenameType(t *testing.T) {
 		name           string
 		preloaded      []*gotype.GoType
 		input          *gotype.GoField
-		parents        []string
 		want           string
 		wantImportInfo bool
 	}{
@@ -50,17 +49,13 @@ func TestRenameType(t *testing.T) {
 					},
 				}),
 			),
-			parents: []string{"Group"},
-			want:    "Spec",
+			want: "Spec",
 		},
 
 		{
 			name: "Group Spec named GroupSpec with preloads",
 			preloaded: []*gotype.GoType{
-				{
-					Name: "Spec", // reserves this type name
-					Kind: "object",
-				},
+				gotype.NewStruct("Spec", []*gotype.GoField{}),
 			},
 			input: gotype.NewGoField(
 				"Spec",
@@ -69,11 +64,9 @@ func TestRenameType(t *testing.T) {
 						Name:   "V20231115",
 						GoType: &gotype.GoType{},
 					},
-				},
-				),
+				}),
 			),
-			parents: []string{"Group"},
-			want:    "GroupSpec",
+			want: "GroupSpec",
 		},
 
 		{
@@ -98,7 +91,6 @@ func TestRenameType(t *testing.T) {
 					},
 				}),
 			),
-			parents:        []string{"Group", "Spec"},
 			want:           "Reference",
 			wantImportInfo: true,
 		},
@@ -118,7 +110,6 @@ func TestRenameType(t *testing.T) {
 					},
 				}),
 			),
-			parents:        []string{"Group", "Spec"},
 			want:           "LocalReference",
 			wantImportInfo: true,
 		},
@@ -140,14 +131,14 @@ func TestRenameType(t *testing.T) {
 					}),
 				),
 			),
-			parents:        []string{"Group", "Spec"},
 			want:           "LocalReference",
 			wantImportInfo: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			td := gotype.NewTypeDict(nil, tc.preloaded...)
-			err := td.RenameField(tc.input, tc.parents)
+			root := gotype.NewStruct("Group", []*gotype.GoField{tc.input})
+			err := td.RegisterAndResolve([]*gotype.GoType{root})
 			require.NoError(t, err)
 			goType := tc.input.GoType
 			if goType.Kind == gotype.ArrayKind {
@@ -242,6 +233,7 @@ func TestBuildOpenAPIType(t *testing.T) {
 		gotype.NewGoField("SimpleNumber", gotype.NewPrimitive("float64", "float64")),
 		gotype.NewGoField("SimpleInteger", gotype.NewPrimitive("int", "int")),
 	})
+	require.NoError(t, td.RegisterAndResolve([]*gotype.GoType{goType}))
 	assert.Equal(t, expectedType, goType)
 }
 
@@ -272,13 +264,16 @@ func TestConditionsMatch(t *testing.T) {
 	for _, tc := range []struct {
 		title string
 		td    *gotype.TypeDict
+		// If true, Condition is preloaded as AutoImportKind and the OpenAPI struct is replaced.
+		autoImportPreload bool
 	}{
 		{
 			title: "match conditions with a known type",
 			td:    gotype.NewTypeDict(nil, gotype.KnownTypes()...),
 		},
 		{
-			title: "match conditions with renames and imports",
+			title:             "match conditions with renames and imports",
+			autoImportPreload: true,
 			td: gotype.NewTypeDict(
 				map[string]string{
 					"Cond": "Condition",
@@ -338,53 +333,71 @@ func TestConditionsMatch(t *testing.T) {
 				},
 				Import: &config.ImportInfo{},
 			}
-			require.NoError(t, tc.td.RenameType([]string{"conditions"}, input))
-			want := &gotype.GoType{
-				Name: "Condition",
-				Kind: "struct",
-				Fields: []*gotype.GoField{
-					{
-						Comment: "Last time the condition transitioned from one status to another.",
-						Name:    "LastTransitionTime",
-						GoType: &gotype.GoType{
-							Name: "Time",
-							Kind: "opaque",
-							Import: &config.ImportInfo{
-								Alias: "metav1",
-								Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
+			root := gotype.NewStruct("Resource", []*gotype.GoField{
+				gotype.NewGoField("Status", gotype.NewStruct("Status", []*gotype.GoField{
+					gotype.NewGoField("Conditions", gotype.NewArray(input)),
+				})),
+			})
+			require.NoError(t, tc.td.RegisterAndResolve([]*gotype.GoType{root}))
+			var want *gotype.GoType
+			if tc.autoImportPreload {
+				want = &gotype.GoType{
+					Name:   "Condition",
+					Kind:   gotype.AutoImportKind,
+					Fields: nil,
+					Import: &config.ImportInfo{
+						Alias: "metav1",
+						Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
+					},
+				}
+			} else {
+				want = &gotype.GoType{
+					Name: "Condition",
+					Kind: "struct",
+					Fields: []*gotype.GoField{
+						{
+							Comment: "Last time the condition transitioned from one status to another.",
+							Name:    "LastTransitionTime",
+							GoType: &gotype.GoType{
+								Name: "Time",
+								Kind: "opaque",
+								Import: &config.ImportInfo{
+									Alias: "metav1",
+									Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
+								},
 							},
 						},
+						{
+							Comment: "A human readable message indicating details about the transition.",
+							Name:    "Message",
+							GoType:  &gotype.GoType{Name: "string", Kind: gotype.StringKind},
+						},
+						{
+							Comment: "observedGeneration represents the .metadata.generation that the condition was set based upon.",
+							Name:    "ObservedGeneration",
+							GoType:  &gotype.GoType{Name: "int64", Kind: gotype.IntKind},
+						},
+						{
+							Comment: "The reason for the condition's last transition.",
+							Name:    "Reason",
+							GoType:  &gotype.GoType{Name: "string", Kind: gotype.StringKind},
+						},
+						{
+							Comment: "Status of the condition, one of True, False, Unknown.",
+							Name:    "Status",
+							GoType:  &gotype.GoType{Name: "ConditionStatus", Kind: gotype.StringKind},
+						},
+						{
+							Comment: "Type of condition.",
+							Name:    "Type",
+							GoType:  &gotype.GoType{Name: "string", Kind: gotype.StringKind},
+						},
 					},
-					{
-						Comment: "A human readable message indicating details about the transition.",
-						Name:    "Message",
-						GoType:  &gotype.GoType{Name: "string", Kind: gotype.StringKind},
+					Import: &config.ImportInfo{
+						Alias: "metav1",
+						Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
 					},
-					{
-						Comment: "observedGeneration represents the .metadata.generation that the condition was set based upon.",
-						Name:    "ObservedGeneration",
-						GoType:  &gotype.GoType{Name: "int64", Kind: gotype.IntKind},
-					},
-					{
-						Comment: "The reason for the condition's last transition.",
-						Name:    "Reason",
-						GoType:  &gotype.GoType{Name: "string", Kind: gotype.StringKind},
-					},
-					{
-						Comment: "Status of the condition, one of True, False, Unknown.",
-						Name:    "Status",
-						GoType:  &gotype.GoType{Name: "ConditionStatus", Kind: gotype.StringKind},
-					},
-					{
-						Comment: "Type of condition.",
-						Name:    "Type",
-						GoType:  &gotype.GoType{Name: "string", Kind: gotype.StringKind},
-					},
-				},
-				Import: &config.ImportInfo{
-					Alias: "metav1",
-					Path:  "k8s.io/apimachinery/pkg/apis/meta/v1",
-				},
+				}
 			}
 			assert.Equal(t, want, input)
 		})

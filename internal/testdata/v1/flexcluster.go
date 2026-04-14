@@ -57,7 +57,7 @@ type FlexClusterSpecV20250312Entry struct {
 
 	// ProviderSettings Group of cloud provider settings that configure the provisioned
 	// MongoDB flex cluster.
-	ProviderSettings ProviderSettings `json:"providerSettings"`
+	ProviderSettings EntryProviderSettings `json:"providerSettings"`
 
 	// Tags List that contains key-value pairs between 1 to 255 characters in length
 	// for tagging and categorizing the instance.
@@ -69,7 +69,7 @@ type FlexClusterSpecV20250312Entry struct {
 	TerminationProtectionEnabled *bool `json:"terminationProtectionEnabled,omitempty"`
 }
 
-type ProviderSettings struct {
+type EntryProviderSettings struct {
 	// BackingProviderName Cloud service provider on which MongoDB Cloud provisioned
 	// the flex cluster.
 	BackingProviderName string `json:"backingProviderName"`
@@ -102,7 +102,7 @@ type FlexClusterStatusV20250312 struct {
 
 	// ConnectionStrings Collection of Uniform Resource Locators that point to the
 	// MongoDB database.
-	ConnectionStrings *V20250312ConnectionStrings `json:"connectionStrings,omitempty"`
+	ConnectionStrings *FlexClusterStatusV20250312ConnectionStrings `json:"connectionStrings,omitempty"`
 
 	// CreateDate Date and time when MongoDB Cloud created this instance. This
 	// parameter expresses its value in ISO 8601 format in UTC.
@@ -132,7 +132,7 @@ type FlexClusterStatusV20250312 struct {
 	VersionReleaseSystem *string `json:"versionReleaseSystem,omitempty"`
 }
 
-type V20250312ConnectionStrings struct {
+type FlexClusterStatusV20250312ConnectionStrings struct {
 	// Standard Public connection string that you can use to connect to this cluster.
 	// This connection string uses the mongodb:// protocol.
 	Standard *string `json:"standard,omitempty"`

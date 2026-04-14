@@ -16,8 +16,6 @@
 package gotype
 
 import (
-	"fmt"
-
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -72,14 +70,6 @@ func (gt *GoField) WithOptions(opts ...GoFieldOptionFunc) *GoField {
 		opt(gt)
 	}
 	return gt
-}
-
-// Signature generates a unique signature for a GoField using the type Signature
-func (gt *GoField) Signature() string {
-	if gt == nil {
-		return "nil"
-	}
-	return fmt.Sprintf("%s:%s", gt.Name, gt.GoType.Signature())
 }
 
 // IsEmbedded returns whether nor not his field is an embedded one

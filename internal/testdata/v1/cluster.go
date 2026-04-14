@@ -179,7 +179,7 @@ type ClusterSpecV20250312Entry struct {
 	// ReplicationSpecs List of settings that configure your cluster regions. This
 	// array has one object per shard representing node configurations in each shard.
 	// For replica sets there is only one object representing node configurations.
-	ReplicationSpecs *[]ReplicationSpecs `json:"replicationSpecs,omitempty"`
+	ReplicationSpecs *[]EntryReplicationSpecs `json:"replicationSpecs,omitempty"`
 
 	// RootCertType Root Certificate Authority that MongoDB Atlas cluster uses. MongoDB
 	// Cloud supports Internet Security Research Group.
@@ -254,7 +254,7 @@ type Links struct {
 	Rel *string `json:"rel,omitempty"`
 }
 
-type ReplicationSpecs struct {
+type EntryReplicationSpecs struct {
 	/*
 	   RegionConfigs Hardware specifications for nodes set for a given region. Each **regionConfigs** object describes the region's priority in elections and the number and type of MongoDB nodes that MongoDB Cloud deploys to the region. Each **regionConfigs** object must have either an **analyticsSpecs** object, **electableSpecs** object, or **readOnlySpecs** object. Tenant clusters only require **electableSpecs. Dedicated** clusters can specify any of these specifications, but must have at least one **electableSpecs** object within a **replicationSpec**.
 
@@ -277,16 +277,16 @@ type ReplicationSpecs struct {
 type RegionConfigs struct {
 	// AnalyticsAutoScaling Options that determine how this cluster handles resource
 	// scaling.
-	AnalyticsAutoScaling *AnalyticsAutoScaling `json:"analyticsAutoScaling,omitempty"`
+	AnalyticsAutoScaling *AutoScaling `json:"analyticsAutoScaling,omitempty"`
 
 	// AnalyticsSpecs Hardware specifications for read-only nodes in the region.
 	// Read-only nodes can never become the primary member, but can enable local reads.
 	// If you don't specify this parameter, no read-only nodes are deployed to the
 	// region.
-	AnalyticsSpecs *AnalyticsSpecs `json:"analyticsSpecs,omitempty"`
+	AnalyticsSpecs *ReadOnlySpecs `json:"analyticsSpecs,omitempty"`
 
 	// AutoScaling Options that determine how this cluster handles resource scaling.
-	AutoScaling *AnalyticsAutoScaling `json:"autoScaling,omitempty"`
+	AutoScaling *AutoScaling `json:"autoScaling,omitempty"`
 
 	/*
 	   BackingProviderName Cloud service provider on which MongoDB Cloud provisioned the multi-tenant cluster. The resource returns this parameter when **providerName** is `TENANT` and **electableSpecs.instanceSize** is `M0`, `M2` or `M5`.
@@ -316,7 +316,7 @@ type RegionConfigs struct {
 	// Read-only nodes can never become the primary member, but can enable local reads.
 	// If you don't specify this parameter, no read-only nodes are deployed to the
 	// region.
-	ReadOnlySpecs *AnalyticsSpecs `json:"readOnlySpecs,omitempty"`
+	ReadOnlySpecs *ReadOnlySpecs `json:"readOnlySpecs,omitempty"`
 
 	// RegionName Physical location of your MongoDB cluster nodes. The region you
 	// choose can affect network latency for clients accessing your databases. The
@@ -333,7 +333,7 @@ type RegionConfigs struct {
 	RegionName *string `json:"regionName,omitempty"`
 }
 
-type AnalyticsAutoScaling struct {
+type AutoScaling struct {
 	// Compute Options that determine how this cluster handles CPU scaling.
 	Compute *Compute `json:"compute,omitempty"`
 
@@ -381,7 +381,7 @@ type DiskGB struct {
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
-type AnalyticsSpecs struct {
+type ReadOnlySpecs struct {
 	/*
 	   DiskIOPS Target throughput desired for storage attached to your Azure-provisioned cluster. Change this parameter if you:
 
@@ -514,7 +514,7 @@ type ClusterStatusV20250312 struct {
 
 	// ConnectionStrings Collection of Uniform Resource Locators that point to the
 	// MongoDB database.
-	ConnectionStrings *ConnectionStrings `json:"connectionStrings,omitempty"`
+	ConnectionStrings *ClusterStatusV20250312ConnectionStrings `json:"connectionStrings,omitempty"`
 
 	// CreateDate Date and time when MongoDB Cloud created this cluster. This parameter
 	// expresses its value in ISO 8601 format in UTC.
@@ -585,7 +585,7 @@ type ClusterStatusV20250312 struct {
 	StateName *string `json:"stateName,omitempty"`
 }
 
-type ConnectionStrings struct {
+type ClusterStatusV20250312ConnectionStrings struct {
 	// AwsPrivateLink Private endpoint-aware connection strings that use AWS-hosted
 	// clusters with Amazon Web Services (AWS) PrivateLink. Each key identifies an
 	// Amazon Web Services (AWS) interface endpoint. Each value identifies the related

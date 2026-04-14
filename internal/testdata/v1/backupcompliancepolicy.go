@@ -79,7 +79,7 @@ type BackupCompliancePolicySpecV20250312Entry struct {
 	EncryptionAtRestEnabled *bool `json:"encryptionAtRestEnabled,omitempty"`
 
 	// OnDemandPolicyItem Specifications for on-demand policy.
-	OnDemandPolicyItem *OnDemandPolicyItem `json:"onDemandPolicyItem,omitempty"`
+	OnDemandPolicyItem *PolicyItems `json:"onDemandPolicyItem,omitempty"`
 
 	// PitEnabled Flag that indicates whether the cluster uses Continuous Cloud Backups
 	// with a Backup Compliance Policy. If unspecified, this value defaults to false.
@@ -98,10 +98,10 @@ type BackupCompliancePolicySpecV20250312Entry struct {
 
 	// ScheduledPolicyItems List that contains the specifications for one scheduled
 	// policy.
-	ScheduledPolicyItems *[]OnDemandPolicyItem `json:"scheduledPolicyItems,omitempty"`
+	ScheduledPolicyItems *[]PolicyItems `json:"scheduledPolicyItems,omitempty"`
 }
 
-type OnDemandPolicyItem struct {
+type PolicyItems struct {
 	// FrequencyInterval Number that indicates the frequency interval for a set of
 	// snapshots. MongoDB Cloud ignores this setting for non-hourly policy items in
 	// Backup Compliance Policy settings.

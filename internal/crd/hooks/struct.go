@@ -48,9 +48,6 @@ func StructHookFn(td *gotype.TypeDict, hooks []crd.OpenAPI2GoHook, crdType *crd.
 		field := gotype.NewGoFieldWithKey(key, key, fieldType)
 		field.Comment = props.Description
 		field.Required = slices.Contains(crdType.Schema.Required, key)
-		if err = td.RenameField(field, fieldsParents); err != nil {
-			return nil, fmt.Errorf("failed to rename field %v: %w", field, err)
-		}
 		fields = append(fields, field)
 	}
 

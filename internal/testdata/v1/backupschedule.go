@@ -165,7 +165,7 @@ type Policies struct {
 	Id *string `json:"id,omitempty"`
 
 	// PolicyItems List that contains the specifications for one policy.
-	PolicyItems *[]OnDemandPolicyItem `json:"policyItems,omitempty"`
+	PolicyItems *[]PolicyItems `json:"policyItems,omitempty"`
 }
 
 type BackupScheduleStatus struct {

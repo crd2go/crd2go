@@ -32,12 +32,6 @@ func TestStructHookFn(t *testing.T) {
 		Kind:    gotype.ArrayKind,
 		Element: &gotype.GoType{Name: "Struct", Kind: gotype.StructKind},
 	}
-	fieldToRename := gotype.GoField{
-		Name:     "Array",
-		Key:      "Array",
-		GoType:   &typeToRename,
-		Required: false,
-	}
 
 	tests := map[string]struct {
 		hooks         []crd.OpenAPI2GoHook
@@ -64,7 +58,7 @@ func TestStructHookFn(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to parse prop type: %w", fmt.Errorf("unsupported Open API type \"prop\"")),
 		},
-		"failed to rename field": {
+		"object type with conflicting names resolved by prepend": {
 			hooks: []crd.OpenAPI2GoHook{
 				hookMock(t, &typeToRename),
 			},
@@ -73,19 +67,24 @@ func TestStructHookFn(t *testing.T) {
 				Schema: &apiextensionsv1.JSONSchemaProps{
 					Type: crd.OpenAPIObject,
 					Properties: map[string]apiextensionsv1.JSONSchemaProps{
-						"Array": {Type: crd.OpenAPIArray},
+						"Array": {
+							Type: crd.OpenAPIArray,
+							Items: &apiextensionsv1.JSONSchemaPropsOrArray{
+								Schema: &apiextensionsv1.JSONSchemaProps{Type: crd.OpenAPIObject},
+							},
+						},
 					},
 				},
 				Parents: []string{"Parent"},
 			},
-			expectedError: fmt.Errorf(
-				"failed to rename field %v: %w",
-				&fieldToRename,
-				fmt.Errorf(
-					"failed to rename field type: %w",
-					fmt.Errorf("failed to find a free type name for type %v", &typeToRename),
-				),
-			),
+			expectedError: nil,
+			expectedType: func() *gotype.GoType {
+				arr := gotype.NewArray(&gotype.GoType{Name: "ObjectData", Kind: gotype.StructKind})
+				arr.Name = "Array"
+				return gotype.NewStruct("Object", []*gotype.GoField{
+					gotype.NewGoFieldWithKey("Array", "Array", arr),
+				})
+			}(),
 		},
 		"object type with no properties": {
 			crdType: &crd.CRDType{
@@ -121,11 +120,17 @@ func TestStructHookFn(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			td := gotype.NewTypeDict(map[string]string{"Struct": "Data"}, gotype.KnownTypes()...)
-			td.Add(&gotype.GoType{Name: "Data", Kind: gotype.StringKind})
-			td.Add(&gotype.GoType{Name: "ObjectData", Kind: gotype.StringKind})
-			td.Add(&gotype.GoType{Name: "ParentObjectData", Kind: gotype.StringKind})
+			td.AddAll(
+				gotype.NewPrimitive("Data", gotype.StringKind),
+				gotype.NewPrimitive("ObjectData", gotype.StringKind),
+				gotype.NewPrimitive("ParentObjectData", gotype.StringKind),
+			)
 			got, err := StructHookFn(td, tt.hooks, tt.crdType)
 			assert.Equal(t, tt.expectedError, err)
+			if err == nil && got != nil {
+				root := gotype.NewStruct("Root", []*gotype.GoField{gotype.NewGoField("X", got)})
+				_ = td.RegisterAndResolve([]*gotype.GoType{root})
+			}
 			assert.Equal(t, tt.expectedType, got)
 		})
 	}

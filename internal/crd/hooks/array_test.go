@@ -83,7 +83,7 @@ func TestArrayHookFn(t *testing.T) {
 				fmt.Errorf("unsupported Open API type %q", "ArrayWithInvalidElementType"),
 			),
 		},
-		"failed to rename element type": {
+		"array with element type that gets disambiguated": {
 			hooks: []crd.OpenAPI2GoHook{
 				hookMock(t, &gotype.GoType{Name: "Object", Kind: gotype.StructKind}),
 			},
@@ -99,11 +99,8 @@ func TestArrayHookFn(t *testing.T) {
 				},
 				Parents: []string{"Parent"},
 			},
-			expectedErr: fmt.Errorf(
-				"failed to rename element type under %s: %w",
-				"Array",
-				fmt.Errorf("failed to find a free type name for type %v", &gotype.GoType{Name: "Data", Kind: gotype.StructKind}),
-			),
+			expectedErr:  nil,
+			expectedType: gotype.NewArray(&gotype.GoType{Name: "Data", Kind: gotype.StructKind}),
 		},
 		"array of strings": {
 			hooks: []crd.OpenAPI2GoHook{
@@ -126,11 +123,17 @@ func TestArrayHookFn(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			td := gotype.NewTypeDict(map[string]string{"Object": "Data"}, gotype.KnownTypes()...)
-			td.Add(&gotype.GoType{Name: "Data", Kind: gotype.ArrayKind})
-			td.Add(&gotype.GoType{Name: "ParentData", Kind: gotype.ArrayKind})
+			td.AddAll(
+				gotype.NewStruct("Data", []*gotype.GoField{}),
+				gotype.NewStruct("Parent", []*gotype.GoField{}),
+			)
 
 			got, err := ArrayHookFn(td, tt.hooks, tt.crdType)
 			assert.Equal(t, tt.expectedErr, err)
+			if err == nil && got != nil && tt.expectedType != nil {
+				root := gotype.NewStruct("Root", []*gotype.GoField{gotype.NewGoField("X", got)})
+				_ = td.RegisterAndResolve([]*gotype.GoType{root})
+			}
 			assert.Equal(t, tt.expectedType, got)
 		})
 	}

@@ -23,7 +23,7 @@ type DatabaseUser struct {
 
 	Spec DatabaseUserSpec `json:"spec,omitempty"`
 
-	Status DatabaseUserStatus `json:"status,omitempty"`
+	Status StatusConditions `json:"status,omitempty"`
 }
 
 type DatabaseUserSpec struct {
@@ -153,7 +153,7 @@ type Scopes struct {
 	Type string `json:"type"`
 }
 
-type DatabaseUserStatus struct {
+type StatusConditions struct {
 	// Conditions Represents the latest available observations of a resource's current
 	// state.
 	Conditions *[]metav1.Condition `json:"conditions,omitempty"`

@@ -27,8 +27,8 @@ var (
 	TimeType = BuiltInType("Time", "metav1", "k8s.io/apimachinery/pkg/apis/meta/v1")
 
 	builtInTypes = map[string]*GoType{
-		TimeType.Signature(): TimeType,
-		JSONType.Signature(): JSONType,
+		HashType(TimeType): TimeType,
+		HashType(JSONType): JSONType,
 	}
 )
 
