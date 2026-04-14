@@ -17,6 +17,7 @@ package gotype
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/crd2go/crd2go/pkg/config"
 )
@@ -138,7 +139,7 @@ func (td *TypeDict) registerTree(gt *GoType, path []string) error {
 		return nil
 	}
 
-	typePath := append(path, base.Name)
+	typePath := slices.Concat(path, []string{base.Name})
 	if err := td.nameEngine.Register(typePath, base); err != nil {
 		return err
 	}
