@@ -16,6 +16,7 @@
 package gotype
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -203,4 +204,49 @@ func TestTypeDict_RegisterAndResolve_WithKnownTypes(t *testing.T) {
 
 	assert.Equal(t, "Reference", ref.Name)
 	assert.NotNil(t, ref.Import)
+}
+
+func TestTypeDict_WithExistingNames_ConflictError(t *testing.T) {
+	// Two roots each have a nested "Config" struct with different fields.
+	// The on-disk file declares a Config that matches neither, so both
+	// candidates are recorded and RegisterAndResolve returns an
+	// ExistingNameConflictError.
+	configA := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+	structA := NewStruct("A", []*GoField{NewGoField("Config", configA)})
+	configB := NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+	structB := NewStruct("B", []*GoField{NewGoField("Config", configB)})
+
+	existingFile := writeTempGoFile(t, "type Config struct{ Z string }")
+	td := NewTypeDict(nil).WithExistingNames(map[string]string{"Config": existingFile})
+
+	err := td.RegisterAndResolve([]*GoType{structA, structB})
+
+	var conflictErr *ExistingNameConflictError
+	require.True(t, errors.As(err, &conflictErr), "expected ExistingNameConflictError, got: %v", err)
+	require.Len(t, conflictErr.Conflicts, 1)
+	assert.Equal(t, "Config", conflictErr.Conflicts[0].Name)
+	assert.Equal(t,
+		[]string{"A.Config", "B.Config"},
+		sortedPaths(conflictErr.Conflicts[0].Candidates),
+	)
+}
+
+func TestTypeDict_WithPinnings_ResolvesConflict(t *testing.T) {
+	// Same setup as above but A.Config is pinned, so it keeps the name "Config"
+	// and B.Config is renamed to "BConfig". No error should be returned.
+	configA := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+	structA := NewStruct("A", []*GoField{NewGoField("Config", configA)})
+	configB := NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+	structB := NewStruct("B", []*GoField{NewGoField("Config", configB)})
+
+	existingFile := writeTempGoFile(t, "type Config struct{ Z string }")
+	td := NewTypeDict(nil).
+		WithExistingNames(map[string]string{"Config": existingFile}).
+		WithPinnings([]string{"A.Config"})
+
+	err := td.RegisterAndResolve([]*GoType{structA, structB})
+	require.NoError(t, err)
+
+	assert.Equal(t, "Config", configA.Name, "pinned type must keep its name")
+	assert.Equal(t, "BConfig", configB.Name, "unpinned type must be prepended")
 }
