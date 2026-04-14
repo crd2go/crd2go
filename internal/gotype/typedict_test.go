@@ -52,7 +52,7 @@ func TestTypeDictHas(t *testing.T) {
 			if tt.expected {
 				root := NewStruct("Root", []*GoField{NewGoField("User", tt.goType)})
 				err := td.RegisterAndResolve([]*GoType{root})
-				requireNoErr(t, err)
+				require.NoError(t, err)
 			}
 			assert.Equal(t, tt.expected, td.Has(tt.goType))
 		})
@@ -123,7 +123,7 @@ func TestTypeDict_MarkGenerated(t *testing.T) {
 	gt := NewStruct("User", []*GoField{})
 	td := NewTypeDict(map[string]string{}, []*GoType{}...)
 	err := td.RegisterAndResolve([]*GoType{gt})
-	requireNoErr(t, err)
+	require.NoError(t, err)
 
 	td.MarkGenerated(gt)
 	assert.True(t, td.WasGenerated(gt))
@@ -135,7 +135,7 @@ func TestTypeDict_RegisterAndResolve(t *testing.T) {
 
 	td := NewTypeDict(nil)
 	err := td.RegisterAndResolve([]*GoType{root})
-	requireNoErr(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "Resource", root.Name)
 	assert.Equal(t, "Spec", spec.Name)
@@ -147,7 +147,7 @@ func TestTypeDict_RegisterAndResolve_WithRenames(t *testing.T) {
 
 	td := NewTypeDict(map[string]string{"Config": "Settings"})
 	err := td.RegisterAndResolve([]*GoType{root})
-	requireNoErr(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "Settings", config.Name)
 }
@@ -199,15 +199,8 @@ func TestTypeDict_RegisterAndResolve_WithKnownTypes(t *testing.T) {
 
 	td := NewTypeDict(nil, known)
 	err := td.RegisterAndResolve([]*GoType{root})
-	requireNoErr(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "Reference", ref.Name)
 	assert.NotNil(t, ref.Import)
-}
-
-func requireNoErr(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
 }
