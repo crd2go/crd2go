@@ -165,8 +165,11 @@ func (n *nameEngine) Get(name string) (*GoType, bool) {
 func (n *nameEngine) buildByNameIndex() {
 	n.byName = make(map[string]*GoType)
 	for _, infos := range n.byHash {
-		if len(infos) > 0 {
+		if len(infos) == 1 {
 			n.byName[infos[0].gt.Name] = infos[0].gt
+		}
+		if len(infos) > 1 {
+			panic(fmt.Sprintf("multiple %v types with hash: %s", infos, infos[0].hash))
 		}
 	}
 }
