@@ -65,6 +65,10 @@ func ScanExistingStructNames(dir string) (map[string]string, error) {
 			return perr
 		}
 		for _, n := range names {
+			existing := out[n]
+			if existing != "" {
+				return fmt.Errorf("multiple types with same name %q: %s and %s", n, existing, path)
+			}
 			out[n] = path
 		}
 		return nil
