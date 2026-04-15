@@ -16,10 +16,6 @@
 package gotype
 
 import (
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -350,7 +346,7 @@ func TestNameEngine(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "existing name conflict records all candidates when field narrowing finds no match",
+			name: "existing name conflict records all candidates without narrowing",
 			regsFn: func() []nameEngineReg {
 				structA, configA := newConflictStructsA()
 				structB, configB := newConflictStructsB()
@@ -362,33 +358,14 @@ func TestNameEngine(t *testing.T) {
 				}
 			},
 			setupFn: func(t *testing.T) (map[string]string, map[string]bool) {
-				// existing Config has field Z — matches neither configA (X) nor configB (Y)
-				f := writeTempGoFile(t, "type Config struct{ Z string }")
-				return map[string]string{"Config": f}, nil
-			},
-			wantConflicts: []ExistingNameConflict{
-				{Name: "Config", Candidates: [][]string{{"A", "Config"}, {"B", "Config"}}},
-			},
-		},
-		{
-			name: "existing name conflict narrowed to one candidate by field match",
-			regsFn: func() []nameEngineReg {
-				structA, configA := newConflictStructsA()
-				structB, configB := newConflictStructsB()
-				return []nameEngineReg{
-					{path: []string{"A"}, gt: structA},
-					{path: []string{"A", "Config"}, gt: configA},
-					{path: []string{"B"}, gt: structB},
-					{path: []string{"B", "Config"}, gt: configB},
-				}
-			},
-			setupFn: func(t *testing.T) (map[string]string, map[string]bool) {
-				// existing Config has field X — matches only configA (A.Config)
 				f := writeTempGoFile(t, "type Config struct{ X string }")
 				return map[string]string{"Config": f}, nil
 			},
 			wantConflicts: []ExistingNameConflict{
-				{Name: "Config", Candidates: [][]string{{"A", "Config"}}},
+				{Name: "Config", candidates: []typeInfo{
+					{path: []string{"A", "Config"}},
+					{path: []string{"B", "Config"}},
+				}},
 			},
 		},
 		{
@@ -458,7 +435,10 @@ func TestNameEngine(t *testing.T) {
 				for i, want := range tt.wantConflicts {
 					got := conflictErr.Conflicts[i]
 					assert.Equal(t, want.Name, got.Name)
-					assert.Equal(t, sortedPaths(want.Candidates), sortedPaths(got.Candidates))
+					assert.Equal(t, sortedCandidatePaths(want.candidates), sortedCandidatePaths(got.candidates))
+					for _, info := range got.candidates {
+						assert.NotNil(t, info.gt, "each candidate typeInfo must carry its GoType")
+					}
 				}
 				return
 			}
@@ -537,27 +517,6 @@ type nameEngineReg struct {
 	gt   *GoType
 }
 
-// sortedPaths joins each path slice into a dot-separated string and sorts them,
-// so candidate order from non-deterministic map iteration doesn't affect assertions.
-func sortedPaths(paths [][]string) []string {
-	joined := make([]string, len(paths))
-	for i, p := range paths {
-		joined[i] = strings.Join(p, ".")
-	}
-	sort.Strings(joined)
-	return joined
-}
-
-// writeTempGoFile writes a temporary Go source file containing the given type
-// declarations under package x, and returns its path.
-func writeTempGoFile(t *testing.T, typeDecls string) string {
-	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "types.go")
-	require.NoError(t, os.WriteFile(path, []byte("package x\n\n"+typeDecls+"\n"), 0o644))
-	return path
-}
-
 func TestExistingNameConflictError_Error(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -567,15 +526,15 @@ func TestExistingNameConflictError_Error(t *testing.T) {
 		{
 			name: "single conflict",
 			conflicts: []ExistingNameConflict{
-				{Name: "Config", Candidates: [][]string{{"A", "Config"}}},
+				{Name: "Config", candidates: []typeInfo{{path: []string{"A", "Config"}}}},
 			},
 			want: "existing type name conflicts: Config (1 candidate(s))",
 		},
 		{
 			name: "multiple conflicts",
 			conflicts: []ExistingNameConflict{
-				{Name: "Config", Candidates: [][]string{{"A", "Config"}, {"B", "Config"}}},
-				{Name: "Spec", Candidates: [][]string{{"A", "Spec"}}},
+				{Name: "Config", candidates: []typeInfo{{path: []string{"A", "Config"}}, {path: []string{"B", "Config"}}}},
+				{Name: "Spec", candidates: []typeInfo{{path: []string{"A", "Spec"}}}},
 			},
 			want: "existing type name conflicts: Config (2 candidate(s)), Spec (1 candidate(s))",
 		},
@@ -584,34 +543,6 @@ func TestExistingNameConflictError_Error(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := &ExistingNameConflictError{Conflicts: tt.conflicts}
 			assert.Equal(t, tt.want, err.Error())
-		})
-	}
-}
-
-func TestFormatPinningsSuggestion(t *testing.T) {
-	tests := []struct {
-		name      string
-		conflicts []ExistingNameConflict
-		want      string
-	}{
-		{
-			name: "single candidate produces a single pinning line",
-			conflicts: []ExistingNameConflict{
-				{Name: "Config", Candidates: [][]string{{"A", "Config"}}},
-			},
-			want: "pinnings:\n  - A.Config\n",
-		},
-		{
-			name: "multiple candidates produces a pick-one comment",
-			conflicts: []ExistingNameConflict{
-				{Name: "Config", Candidates: [][]string{{"A", "Config"}, {"B", "Config"}}},
-			},
-			want: "pinnings:\n  - A.Config | B.Config # pick one\n",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, FormatPinningsSuggestion(tt.conflicts))
 		})
 	}
 }

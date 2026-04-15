@@ -32,31 +32,36 @@ func TestPrintConflictHint(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          error
-		wantOutput   string
-		wantNoOutput bool
+		wantContains []string
+		wantEmpty    bool
 	}{
 		{
-			name:         "non-conflict error prints nothing",
-			err:          fmt.Errorf("some other error"),
-			wantNoOutput: true,
+			name:      "non-conflict error prints nothing",
+			err:       fmt.Errorf("some other error"),
+			wantEmpty: true,
 		},
 		{
-			name: "single candidate prints a direct pinning",
-			err: fmt.Errorf("wrapped: %w", &gotype.ExistingNameConflictError{
-				Conflicts: []gotype.ExistingNameConflict{
-					{Name: "Config", Candidates: [][]string{{"A", "Config"}}},
-				},
-			}),
-			wantOutput: "conflicting names found with existing type names, please use these pinnings in the config to fix:\n\npinnings:\n  - A.Config\n\nOr use flag --force-renames to allow crd2go to rename existing types as needed.\n",
-		},
-		{
-			name: "multiple candidates prints a pick-one comment",
+			name: "conflict error prints hint header and footer",
 			err: &gotype.ExistingNameConflictError{
 				Conflicts: []gotype.ExistingNameConflict{
-					{Name: "Config", Candidates: [][]string{{"A", "Config"}, {"B", "Config"}}},
+					{Name: "Config"},
 				},
 			},
-			wantOutput: "conflicting names found with existing type names, please use these pinnings in the config to fix:\n\npinnings:\n  - A.Config | B.Config # pick one\n\nOr use flag --force-renames to allow crd2go to rename existing types as needed.\n",
+			wantContains: []string{
+				"conflicting names found with existing type names",
+				"--force-renames",
+			},
+		},
+		{
+			name: "wrapped conflict error is detected",
+			err: fmt.Errorf("outer: %w", &gotype.ExistingNameConflictError{
+				Conflicts: []gotype.ExistingNameConflict{
+					{Name: "Spec"},
+				},
+			}),
+			wantContains: []string{
+				"conflicting names found with existing type names",
+			},
 		},
 	}
 
@@ -75,11 +80,13 @@ func TestPrintConflictHint(t *testing.T) {
 			_, err = io.Copy(&buf, r)
 			require.NoError(t, err)
 
-			if tt.wantNoOutput {
+			if tt.wantEmpty {
 				assert.Empty(t, buf.String())
 				return
 			}
-			assert.Equal(t, tt.wantOutput, buf.String())
+			for _, s := range tt.wantContains {
+				assert.Contains(t, buf.String(), s)
+			}
 		})
 	}
 }

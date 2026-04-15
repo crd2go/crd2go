@@ -208,16 +208,14 @@ func TestTypeDict_RegisterAndResolve_WithKnownTypes(t *testing.T) {
 
 func TestTypeDict_WithExistingNames_ConflictError(t *testing.T) {
 	// Two roots each have a nested "Config" struct with different fields.
-	// The on-disk file declares a Config that matches neither, so both
-	// candidates are recorded and RegisterAndResolve returns an
-	// ExistingNameConflictError.
+	// The engine records both candidates without narrowing — narrowing is the
+	// caller's responsibility (via SuggestPinnings in the pinnings layer).
 	configA := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
 	structA := NewStruct("A", []*GoField{NewGoField("Config", configA)})
 	configB := NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
 	structB := NewStruct("B", []*GoField{NewGoField("Config", configB)})
 
-	existingFile := writeTempGoFile(t, "type Config struct{ Z string }")
-	td := NewTypeDict(nil).WithExistingNames(map[string]string{"Config": existingFile})
+	td := NewTypeDict(nil).WithExistingNames(map[string]string{"Config": writeTempGoFile(t, "type Config struct{ Z string }")})
 
 	err := td.RegisterAndResolve([]*GoType{structA, structB})
 
@@ -227,21 +225,22 @@ func TestTypeDict_WithExistingNames_ConflictError(t *testing.T) {
 	assert.Equal(t, "Config", conflictErr.Conflicts[0].Name)
 	assert.Equal(t,
 		[]string{"A.Config", "B.Config"},
-		sortedPaths(conflictErr.Conflicts[0].Candidates),
+		sortedCandidatePaths(conflictErr.Conflicts[0].candidates),
 	)
+	for _, info := range conflictErr.Conflicts[0].candidates {
+		assert.NotNil(t, info.gt, "engine must populate GoType in each candidate for caller-side narrowing")
+	}
 }
 
 func TestTypeDict_WithPinnings_ResolvesConflict(t *testing.T) {
-	// Same setup as above but A.Config is pinned, so it keeps the name "Config"
-	// and B.Config is renamed to "BConfig". No error should be returned.
+	// A.Config is pinned so it keeps the name "Config"; B.Config is renamed to "BConfig".
 	configA := NewStruct("Config", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
 	structA := NewStruct("A", []*GoField{NewGoField("Config", configA)})
 	configB := NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
 	structB := NewStruct("B", []*GoField{NewGoField("Config", configB)})
 
-	existingFile := writeTempGoFile(t, "type Config struct{ Z string }")
 	td := NewTypeDict(nil).
-		WithExistingNames(map[string]string{"Config": existingFile}).
+		WithExistingNames(map[string]string{"Config": writeTempGoFile(t, "type Config struct{ Z string }")}).
 		WithPinnings([]string{"A.Config"})
 
 	err := td.RegisterAndResolve([]*GoType{structA, structB})

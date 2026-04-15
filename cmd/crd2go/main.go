@@ -56,7 +56,10 @@ func printConflictHint(err error) {
 	}
 	fmt.Fprintln(os.Stderr, "conflicting names found with existing type names, please use these pinnings in the config to fix:")
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprint(os.Stderr, gotype.FormatPinningsSuggestion(conflictErr.Conflicts))
+	pinnings, pinErr := gotype.SuggestPinnings(conflictErr.Conflicts)
+	if pinErr == nil {
+		fmt.Fprint(os.Stderr, gotype.FormatPinningsSuggestion(pinnings))
+	}
 	fmt.Fprintln(os.Stderr, "\nOr use flag --force-renames to allow crd2go to rename existing types as needed.")
 }
 

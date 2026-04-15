@@ -31,7 +31,7 @@ var ErrUnresolvedNameCollision = errors.New("could not assign distinct Go names 
 type ExistingNameConflict struct {
 	Name         string     // the shared natural name, e.g. "Config"
 	ExistingFile string     // file on disk that already declares this name
-	Candidates   [][]string // CRD paths of every type competing for this name
+	candidates   []typeInfo // every type competing for this name
 }
 
 // ExistingNameConflictError is returned by NamedRoots when one or more conflicts
@@ -43,29 +43,9 @@ type ExistingNameConflictError struct {
 func (e *ExistingNameConflictError) Error() string {
 	names := make([]string, len(e.Conflicts))
 	for i, c := range e.Conflicts {
-		names[i] = fmt.Sprintf("%s (%d candidate(s))", c.Name, len(c.Candidates))
+		names[i] = fmt.Sprintf("%s (%d candidate(s))", c.Name, len(c.candidates))
 	}
 	return "existing type name conflicts: " + strings.Join(names, ", ")
-}
-
-// FormatPinningsSuggestion returns a YAML snippet that can be pasted into the
-// config to resolve the given conflicts by pinning the matching type paths.
-// Intended for CLI output, not for error messages.
-func FormatPinningsSuggestion(conflicts []ExistingNameConflict) string {
-	var b strings.Builder
-	b.WriteString("pinnings:\n")
-	for _, c := range conflicts {
-		if len(c.Candidates) == 1 {
-			fmt.Fprintf(&b, "  - %s\n", strings.Join(c.Candidates[0], "."))
-		} else {
-			parts := make([]string, len(c.Candidates))
-			for i, path := range c.Candidates {
-				parts[i] = strings.Join(path, ".")
-			}
-			fmt.Fprintf(&b, "  - %s # pick one\n", strings.Join(parts, " | "))
-		}
-	}
-	return b.String()
 }
 
 // HashType returns a stable structural key for a GoType: the single representation
@@ -290,11 +270,7 @@ func bestName(infos []typeInfo) string {
 }
 
 func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
-	recorded, err := n.isExistingNameConflict(candidateTypes)
-	if err != nil {
-		return err
-	}
-	if recorded {
+	if n.isExistingNameConflict(candidateTypes) {
 		return nil
 	}
 	return n.prependPaths(candidateTypes)
@@ -353,66 +329,20 @@ func (n *nameEngine) findPinnedCandidate(candidates []typeInfo) int {
 	return -1
 }
 
-func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) (bool, error) {
+func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) bool {
 	naturalName := candidateTypes[0].gt.Name
 	file, exists := n.existingNames[naturalName]
 	if !exists {
-		return false, nil
+		return false
 	}
 	if n.findPinnedCandidate(candidateTypes) >= 0 {
-		return false, nil
-	}
-	narrowed, err := narrowCandidates(file, naturalName, candidateTypes)
-	if err != nil {
-		return false, err
-	}
-	paths := make([][]string, len(narrowed))
-	for i, c := range narrowed {
-		paths[i] = c.path
+		return false
 	}
 	n.pendingConflicts = append(n.pendingConflicts, ExistingNameConflict{
 		Name:         naturalName,
 		ExistingFile: file,
-		Candidates:   paths,
+		candidates:   candidateTypes,
 	})
-	return true, nil
-}
-
-// narrowCandidates attempts to identify which candidate matches the existing on-disk
-// struct by comparing field names in order. If exactly one candidate matches, only
-// that candidate is returned. Otherwise all candidates are returned unchanged.
-func narrowCandidates(filePath, typeName string, candidates []typeInfo) ([]typeInfo, error) {
-	existingFields, err := ScanStructFields(filePath, typeName)
-	if err != nil {
-		return nil, fmt.Errorf("scanning fields of existing type %q in %s: %w", typeName, filePath, err)
-	}
-	var matches []typeInfo
-	for _, c := range candidates {
-		if goTypeFieldsMatch(c.gt, existingFields) {
-			matches = append(matches, c)
-		}
-	}
-	if len(matches) == 1 {
-		return matches, nil
-	}
-	return candidates, nil
-}
-
-func goTypeFieldsMatch(gt *GoType, existingFields []string) bool {
-	var names []string
-	for _, f := range gt.Fields {
-		if !f.IsEmbedded() {
-			names = append(names, f.Name)
-		}
-	}
-	if len(names) != len(existingFields) {
-		return false
-	}
-	for i, name := range names {
-		if name != existingFields[i] {
-			return false
-		}
-	}
 	return true
 }
 
