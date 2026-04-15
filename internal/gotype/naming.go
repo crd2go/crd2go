@@ -338,6 +338,10 @@ func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) bool {
 	if n.findPinnedCandidate(candidateTypes) >= 0 {
 		return false
 	}
+	// This avoids rename fixes and blocks code generation.
+	// The error is not returned right away to be able to gather all other
+	// possible conflicts before giving up.
+	// Note that the unfixed type forest would produce invalid code.
 	n.pendingConflicts = append(n.pendingConflicts, ExistingNameConflict{
 		Name:         naturalName,
 		ExistingFile: file,
