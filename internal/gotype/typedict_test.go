@@ -49,7 +49,7 @@ func TestTypeDictHas(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			td := NewTypeDict(nil, tt.preload...)
+			td := NewTypeDict(nil, tt.preload)
 			if tt.expected {
 				root := NewStruct("Root", []*GoField{NewGoField("User", tt.goType)})
 				err := td.RegisterAndResolve([]*GoType{root})
@@ -92,7 +92,7 @@ func TestTypeDictGet(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			td := NewTypeDict(nil, tt.preload...)
+			td := NewTypeDict(nil, tt.preload)
 			goType, ok := td.Get(tt.name)
 			assert.Equal(t, tt.expected, ok)
 			if tt.expected {
@@ -108,7 +108,7 @@ func TestTypeDictAddAll(t *testing.T) {
 	typeString := NewPrimitive("String", StringKind)
 	typeUser := NewStruct("User", []*GoField{})
 
-	td := NewTypeDict(map[string]string{}, []*GoType{}...)
+	td := NewTypeDict(map[string]string{}, nil)
 	td.AddAll(typeString, typeUser)
 
 	gt, ok := td.Get("String")
@@ -122,7 +122,7 @@ func TestTypeDictAddAll(t *testing.T) {
 
 func TestTypeDict_MarkGenerated(t *testing.T) {
 	gt := NewStruct("User", []*GoField{})
-	td := NewTypeDict(map[string]string{}, []*GoType{}...)
+	td := NewTypeDict(map[string]string{}, nil)
 	err := td.RegisterAndResolve([]*GoType{gt})
 	require.NoError(t, err)
 
@@ -134,7 +134,7 @@ func TestTypeDict_RegisterAndResolve(t *testing.T) {
 	spec := NewStruct("Spec", []*GoField{NewGoField("Name", NewPrimitive("string", StringKind))})
 	root := NewStruct("Resource", []*GoField{NewGoField("Spec", spec)})
 
-	td := NewTypeDict(nil)
+	td := NewTypeDict(nil, nil)
 	err := td.RegisterAndResolve([]*GoType{root})
 	require.NoError(t, err)
 
@@ -146,7 +146,7 @@ func TestTypeDict_RegisterAndResolve_WithRenames(t *testing.T) {
 	config := NewStruct("Config", []*GoField{})
 	root := NewStruct("Resource", []*GoField{NewGoField("Config", config)})
 
-	td := NewTypeDict(map[string]string{"Config": "Settings"})
+	td := NewTypeDict(map[string]string{"Config": "Settings"}, nil)
 	err := td.RegisterAndResolve([]*GoType{root})
 	require.NoError(t, err)
 
@@ -171,7 +171,7 @@ func TestTypeDict_RegisterAndResolve_MatchImportDoesNotCorruptPreload(t *testing
 	root1 := NewStruct("R1", []*GoField{NewGoField("Ref", gr())})
 	root2 := NewStruct("R2", []*GoField{NewGoField("Ref", gr())})
 
-	td := NewTypeDict(map[string]string{"GroupRef": "LocalReference"}, auto)
+	td := NewTypeDict(map[string]string{"GroupRef": "LocalReference"}, []*GoType{auto})
 	err := td.RegisterAndResolve([]*GoType{root1, root2})
 	require.NoError(t, err)
 
@@ -198,7 +198,7 @@ func TestTypeDict_RegisterAndResolve_WithKnownTypes(t *testing.T) {
 	})
 	root := NewStruct("Resource", []*GoField{NewGoField("Ref", ref)})
 
-	td := NewTypeDict(nil, known)
+	td := NewTypeDict(nil, []*GoType{known})
 	err := td.RegisterAndResolve([]*GoType{root})
 	require.NoError(t, err)
 
@@ -215,7 +215,7 @@ func TestTypeDict_WithExistingNames_ConflictError(t *testing.T) {
 	configB := NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
 	structB := NewStruct("B", []*GoField{NewGoField("Config", configB)})
 
-	td := NewTypeDict(nil).WithExistingNames(map[string]string{"Config": writeTempGoFile(t, "type Config struct{ Z string }")})
+	td := NewTypeDict(nil, nil, WithExistingNames(map[string]string{"Config": writeTempGoFile(t, "type Config struct{ Z string }")}))
 
 	err := td.RegisterAndResolve([]*GoType{structA, structB})
 
@@ -239,9 +239,9 @@ func TestTypeDict_WithPinnings_ResolvesConflict(t *testing.T) {
 	configB := NewStruct("Config", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
 	structB := NewStruct("B", []*GoField{NewGoField("Config", configB)})
 
-	td := NewTypeDict(nil).
-		WithExistingNames(map[string]string{"Config": writeTempGoFile(t, "type Config struct{ Z string }")}).
-		WithPinnings([]string{"A.Config"})
+	td := NewTypeDict(nil, nil,
+		WithExistingNames(map[string]string{"Config": writeTempGoFile(t, "type Config struct{ Z string }")}),
+		WithPinnings([]string{"A.Config"}))
 
 	err := td.RegisterAndResolve([]*GoType{structA, structB})
 	require.NoError(t, err)

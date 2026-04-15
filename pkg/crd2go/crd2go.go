@@ -85,14 +85,15 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	if cfg.Output == "" {
 		return fmt.Errorf("output directory is required")
 	}
-	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...).WithPinnings(cfg.Pinnings)
+	opts := []gotype.TypeDictOption{gotype.WithPinnings(cfg.Pinnings)}
 	if !forceRenames {
 		existing, err := gotype.ScanExistingStructNames(cfg.Output)
 		if err != nil {
 			return fmt.Errorf("scan package for existing type names: %w", err)
 		}
-		td.WithExistingNames(existing)
+		opts = append(opts, gotype.WithExistingNames(existing))
 	}
+	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(), opts...)
 	in, err := os.Open(cfg.Input)
 	if err != nil {
 		return fmt.Errorf("failed to open input file %s: %w", cfg.Input, err)

@@ -42,47 +42,53 @@ type Request struct {
 	TypeDict     *TypeDict
 }
 
-// NewTypeDict creates a new TypeDict with renames and preloaded types.
-func NewTypeDict(renames map[string]string, goTypes ...*GoType) *TypeDict {
+// TypeDictOption is a functional option for configuring a TypeDict at construction time.
+// All options are applied inside NewTypeDict, before the caller has a reference to the
+// TypeDict, which guarantees they take effect before RegisterAndResolve is called.
+type TypeDictOption func(*TypeDict)
+
+// WithExistingNames returns a TypeDictOption that attaches a map of existing on-disk type
+// names (typename → file path, as returned by ScanExistingStructNames) for conflict detection.
+func WithExistingNames(existing map[string]string) TypeDictOption {
+	return func(td *TypeDict) {
+		td.existingNames = existing
+		if ne, ok := td.nameEngine.(*nameEngine); ok {
+			ne.existingNames = existing
+		}
+	}
+}
+
+// WithPinnings returns a TypeDictOption that registers the given dot-separated type paths
+// as pinned, preventing them from being renamed during conflict resolution.
+func WithPinnings(pinnings []string) TypeDictOption {
+	pinned := make(map[string]bool, len(pinnings))
+	for _, p := range pinnings {
+		pinned[p] = true
+	}
+	return func(td *TypeDict) {
+		if ne, ok := td.nameEngine.(*nameEngine); ok {
+			ne.pinnedPaths = pinned
+		}
+	}
+}
+
+// NewTypeDict creates a new TypeDict with renames, preloaded types, and optional configuration.
+func NewTypeDict(renames map[string]string, preloaded []*GoType, opts ...TypeDictOption) *TypeDict {
 	knownTypes := make(map[string]*GoType)
 	knownByHash := make(map[string]*GoType)
-	for _, gt := range goTypes {
+	for _, gt := range preloaded {
 		knownTypes[gt.Name] = gt
 		knownByHash[HashType(gt)] = gt
 	}
-	return &TypeDict{
+	td := &TypeDict{
 		nameEngine:  NewNameEngine(),
 		knownTypes:  knownTypes,
 		knownByHash: knownByHash,
 		renames:     renames,
 		generated:   make(map[string]bool),
 	}
-}
-
-// WithExistingNames attaches a map of existing on-disk type names (typename → file path,
-// as returned by ScanExistingStructNames) for use during conflict detection.
-// Returns the receiver for chaining.
-func (td *TypeDict) WithExistingNames(existing map[string]string) *TypeDict {
-	td.existingNames = existing
-	if ne, ok := td.nameEngine.(*nameEngine); ok {
-		ne.existingNames = existing
-	}
-	return td
-}
-
-// WithPinnings registers the given dot-separated type paths as pinned, preventing
-// them from being renamed during conflict resolution.
-// Returns the receiver for chaining.
-func (td *TypeDict) WithPinnings(pinnings []string) *TypeDict {
-	if len(pinnings) == 0 {
-		return td
-	}
-	pinned := make(map[string]bool, len(pinnings))
-	for _, p := range pinnings {
-		pinned[p] = true
-	}
-	if ne, ok := td.nameEngine.(*nameEngine); ok {
-		ne.pinnedPaths = pinned
+	for _, opt := range opts {
+		opt(td)
 	}
 	return td
 }
