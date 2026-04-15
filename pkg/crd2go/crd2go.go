@@ -81,12 +81,12 @@ func CodeWriterAtPath(dir string) config.CodeWriterFunc {
 }
 
 // GenerateToDir generates Go code from a CRD YAML file into a directory
-func GenerateToDir(cfg *config.Config) error {
+func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	if cfg.Output == "" {
 		return fmt.Errorf("output directory is required")
 	}
 	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...).WithPinnings(cfg.Pinnings)
-	if !cfg.ForceRenames {
+	if !forceRenames {
 		existing, err := gotype.ScanExistingStructNames(cfg.Output)
 		if err != nil {
 			return fmt.Errorf("scan package for existing type names: %w", err)

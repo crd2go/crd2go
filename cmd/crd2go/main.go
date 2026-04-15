@@ -79,12 +79,11 @@ func generate(input, output, gv, config string, forceRenames bool) (*config.Conf
 	if output != "" {
 		cfg.Output = output
 	}
-	cfg.ForceRenames = forceRenames
 	if _, _, err := crd2go.ParseGroupVersion(gv); err != nil {
 		return nil, fmt.Errorf("failed to parse gv: %w", err)
 	}
 	cfg.GroupVersion = gv
-	if err := crd2go.GenerateToDir(cfg); err != nil {
+	if err := crd2go.GenerateToDir(cfg, forceRenames); err != nil {
 		return nil, fmt.Errorf("failed to generate code: %w", err)
 	}
 	return cfg, nil

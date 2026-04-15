@@ -26,9 +26,8 @@ type CodeWriterFunc func(filename string, overwrite bool) (io.WriteCloser, error
 type Config struct {
 	CoreConfig `yaml:",inline"`
 
-	Input        string `yaml:"input"`
-	Output       string `yaml:"output"`
-	ForceRenames bool   `yaml:"-"`
+	Input  string `yaml:"input"`
+	Output string `yaml:"output"`
 }
 
 // ImportedTypeConfig holds one imported type information
