@@ -103,14 +103,6 @@ func GenerateToDir(cfg *config.Config) error {
 		TypeDict:     td,
 	}
 	if err := Generate(&req, in); err != nil {
-		var conflictErr *gotype.ExistingNameConflictError
-		if errors.As(err, &conflictErr) {
-			fmt.Println("conflicting names found with existing type names, please use these pinnings in the config to fix:")
-			fmt.Println()
-			fmt.Print(conflictErr.Error())
-			fmt.Println("\nOr use flag --force-renames to allow crd2go to rename existing types as needed.")
-			return fmt.Errorf("aborting: resolve the conflicts above before generating code")
-		}
 		return fmt.Errorf("failed to generate CRD code: %w", err)
 	}
 	return nil

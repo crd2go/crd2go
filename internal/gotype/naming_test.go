@@ -565,6 +565,36 @@ func TestExistingNameConflictError_Error(t *testing.T) {
 		want      string
 	}{
 		{
+			name: "single conflict",
+			conflicts: []ExistingNameConflict{
+				{Name: "Config", Candidates: [][]string{{"A", "Config"}}},
+			},
+			want: "existing type name conflicts: Config (1 candidate(s))",
+		},
+		{
+			name: "multiple conflicts",
+			conflicts: []ExistingNameConflict{
+				{Name: "Config", Candidates: [][]string{{"A", "Config"}, {"B", "Config"}}},
+				{Name: "Spec", Candidates: [][]string{{"A", "Spec"}}},
+			},
+			want: "existing type name conflicts: Config (2 candidate(s)), Spec (1 candidate(s))",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := &ExistingNameConflictError{Conflicts: tt.conflicts}
+			assert.Equal(t, tt.want, err.Error())
+		})
+	}
+}
+
+func TestFormatPinningsSuggestion(t *testing.T) {
+	tests := []struct {
+		name      string
+		conflicts []ExistingNameConflict
+		want      string
+	}{
+		{
 			name: "single candidate produces a single pinning line",
 			conflicts: []ExistingNameConflict{
 				{Name: "Config", Candidates: [][]string{{"A", "Config"}}},
@@ -581,8 +611,7 @@ func TestExistingNameConflictError_Error(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := &ExistingNameConflictError{Conflicts: tt.conflicts}
-			assert.Equal(t, tt.want, err.Error())
+			assert.Equal(t, tt.want, FormatPinningsSuggestion(tt.conflicts))
 		})
 	}
 }

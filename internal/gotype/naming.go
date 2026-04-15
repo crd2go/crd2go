@@ -41,9 +41,20 @@ type ExistingNameConflictError struct {
 }
 
 func (e *ExistingNameConflictError) Error() string {
+	names := make([]string, len(e.Conflicts))
+	for i, c := range e.Conflicts {
+		names[i] = fmt.Sprintf("%s (%d candidate(s))", c.Name, len(c.Candidates))
+	}
+	return "existing type name conflicts: " + strings.Join(names, ", ")
+}
+
+// FormatPinningsSuggestion returns a YAML snippet that can be pasted into the
+// config to resolve the given conflicts by pinning the matching type paths.
+// Intended for CLI output, not for error messages.
+func FormatPinningsSuggestion(conflicts []ExistingNameConflict) string {
 	var b strings.Builder
 	b.WriteString("pinnings:\n")
-	for _, c := range e.Conflicts {
+	for _, c := range conflicts {
 		if len(c.Candidates) == 1 {
 			fmt.Fprintf(&b, "  - %s\n", strings.Join(c.Candidates[0], "."))
 		} else {

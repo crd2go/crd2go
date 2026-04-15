@@ -16,6 +16,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/crd2go/crd2go/internal/checkerr"
 	"github.com/crd2go/crd2go/internal/fileinput"
+	"github.com/crd2go/crd2go/internal/gotype"
 	"github.com/crd2go/crd2go/pkg/config"
 	"github.com/crd2go/crd2go/pkg/crd2go"
 )
@@ -39,9 +41,23 @@ func main() {
 
 	cfg, err := generate(input, output, gv, config, forceRenames)
 	if err != nil {
+		printConflictHint(err)
 		log.Fatalf("Failed to generate go structs: %v", err)
 	}
 	log.Printf("Code generated at %s", cfg.Output)
+}
+
+// printConflictHint checks if err contains an ExistingNameConflictError and, if so,
+// prints a pinning suggestion to stderr to help the user resolve the conflict.
+func printConflictHint(err error) {
+	var conflictErr *gotype.ExistingNameConflictError
+	if !errors.As(err, &conflictErr) {
+		return
+	}
+	fmt.Fprintln(os.Stderr, "conflicting names found with existing type names, please use these pinnings in the config to fix:")
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprint(os.Stderr, gotype.FormatPinningsSuggestion(conflictErr.Conflicts))
+	fmt.Fprintln(os.Stderr, "\nOr use flag --force-renames to allow crd2go to rename existing types as needed.")
 }
 
 func generate(input, output, gv, config string, forceRenames bool) (*config.Config, error) {
