@@ -56,7 +56,7 @@ func TestGenerateFromCRDs(t *testing.T) {
 	in := bytes.NewBuffer(testdata.CRDsYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
-		TypeDict:     gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()...),
+		TypeDict:     gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()),
 		CoreConfig:   cfg.CoreConfig,
 	}
 	require.NoError(t, Generate(&req, in))
@@ -75,7 +75,7 @@ func TestGenerateFromMixedGroupVersion(t *testing.T) {
 	in := bytes.NewBuffer(testdata.DifferentGVYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
-		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
 		CoreConfig: config.CoreConfig{
 			Version:  crd.FirstVersion,
 			SkipList: disabledKinds,
@@ -91,7 +91,7 @@ func TestGenerateSelectedGroupVersion(t *testing.T) {
 	in := bytes.NewBuffer(testdata.DifferentGVYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
-		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
 		CoreConfig: config.CoreConfig{
 			Version:      crd.FirstVersion,
 			SkipList:     disabledKinds,
@@ -110,7 +110,7 @@ func TestRefs(t *testing.T) {
 	in := bytes.NewBuffer(testdata.SampleRefsYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
-		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+		TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
 		CoreConfig: config.CoreConfig{
 			Version:  crd.FirstVersion,
 			SkipList: disabledKinds,
@@ -165,7 +165,7 @@ func TestGenerateWithDeepCopy(t *testing.T) {
 			in := bytes.NewBuffer(testdata.CRDsYAML)
 			req := gotype.Request{
 				CodeWriterFn: BufferForCRD(buffers),
-				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
 				CoreConfig: config.CoreConfig{
 					Version:  crd.FirstVersion,
 					SkipList: disabledKinds,
@@ -244,7 +244,7 @@ func TestGenerateWithApplyConfiguration(t *testing.T) {
 			in := bytes.NewBuffer(testdata.CRDsYAML)
 			req := gotype.Request{
 				CodeWriterFn: BufferForCRD(buffers),
-				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()...),
+				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
 				CoreConfig: config.CoreConfig{
 					Version:            crd.FirstVersion,
 					SkipList:           disabledKinds,

@@ -21,9 +21,32 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 var ErrUnresolvedNameCollision = errors.New("could not assign distinct Go names to colliding types")
+
+// ExistingNameConflict describes a naming conflict where the natural name is already
+// present in the output package, so automatic renaming would break existing code.
+type ExistingNameConflict struct {
+	Name         string     // the shared natural name, e.g. "Config"
+	ExistingFile string     // file on disk that already declares this name
+	candidates   []typeInfo // every type competing for this name
+}
+
+// ExistingNameConflictError is returned by NamedRoots when one or more conflicts
+// involve existing on-disk types that cannot be safely auto-renamed.
+type ExistingNameConflictError struct {
+	Conflicts []ExistingNameConflict
+}
+
+func (e *ExistingNameConflictError) Error() string {
+	names := make([]string, len(e.Conflicts))
+	for i, c := range e.Conflicts {
+		names[i] = fmt.Sprintf("%s (%d candidate(s))", c.Name, len(c.candidates))
+	}
+	return "existing type name conflicts: " + strings.Join(names, ", ")
+}
 
 // HashType returns a stable structural key for a GoType: the single representation
 // used for deduplication (NameEngine), known-type lookup (TypeDict), and builtins.
@@ -90,10 +113,13 @@ type typeInfo struct {
 }
 
 type nameEngine struct {
-	byHash    map[string][]typeInfo
-	hashCache map[*GoType]string
-	roots     []*GoType
-	byName    map[string]*GoType
+	byHash           map[string][]typeInfo
+	hashCache        map[*GoType]string
+	roots            []*GoType
+	byName           map[string]*GoType
+	existingNames    map[string]string // typename → file path
+	pinnedPaths      map[string]bool   // dot-joined paths that must not be renamed
+	pendingConflicts []ExistingNameConflict
 }
 
 func NewNameEngine() NameEngine {
@@ -141,6 +167,9 @@ func (n *nameEngine) NamedRoots() ([]*GoType, error) {
 		}
 	}
 	n.buildByNameIndex()
+	if len(n.pendingConflicts) > 0 {
+		return nil, &ExistingNameConflictError{Conflicts: n.pendingConflicts}
+	}
 	return n.roots, nil
 }
 
@@ -241,6 +270,17 @@ func bestName(infos []typeInfo) string {
 }
 
 func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
+	if n.isExistingNameConflict(candidateTypes) {
+		return nil
+	}
+	return n.prependPaths(candidateTypes)
+}
+
+// prependPaths resolves name conflicts by prepending ancestor path segments to each
+// candidate's name until all names are unique. A pinned candidate, if any, is skipped
+// so its name is never modified.
+func (n *nameEngine) prependPaths(candidateTypes []typeInfo) error {
+	frozenIdx := n.findPinnedCandidate(candidateTypes)
 	maxPathLen := len(candidateTypes[0].path)
 	for _, c := range candidateTypes[1:] {
 		if len(c.path) > maxPathLen {
@@ -255,6 +295,9 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	// Prepend from immediate parent toward root (leaf-to-root) to match legacy behavior.
 	for round := 1; round <= maxRounds; round++ {
 		for i := range candidateTypes {
+			if i == frozenIdx {
+				continue
+			}
 			c := &candidateTypes[i]
 			if round <= len(c.path)-1 {
 				idx := len(c.path) - 1 - round
@@ -275,6 +318,36 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 		}
 	}
 	return fmt.Errorf("%w: %s", ErrUnresolvedNameCollision, candidateTypes[0].gt.Name)
+}
+
+func (n *nameEngine) findPinnedCandidate(candidates []typeInfo) int {
+	for i, c := range candidates {
+		if n.pinnedPaths[strings.Join(c.path, ".")] {
+			return i
+		}
+	}
+	return -1
+}
+
+func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) bool {
+	naturalName := candidateTypes[0].gt.Name
+	file, exists := n.existingNames[naturalName]
+	if !exists {
+		return false
+	}
+	if n.findPinnedCandidate(candidateTypes) >= 0 {
+		return false
+	}
+	// This avoids rename fixes and blocks code generation.
+	// The error is not returned right away to be able to gather all other
+	// possible conflicts before giving up.
+	// Note that the unfixed type forest would produce invalid code.
+	n.pendingConflicts = append(n.pendingConflicts, ExistingNameConflict{
+		Name:         naturalName,
+		ExistingFile: file,
+		candidates:   candidateTypes,
+	})
+	return true
 }
 
 func hashTypeFast(hashCache map[*GoType]string, gt *GoType) string {

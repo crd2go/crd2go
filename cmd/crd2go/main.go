@@ -16,6 +16,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -23,26 +24,46 @@ import (
 
 	"github.com/crd2go/crd2go/internal/checkerr"
 	"github.com/crd2go/crd2go/internal/fileinput"
+	"github.com/crd2go/crd2go/internal/gotype"
 	"github.com/crd2go/crd2go/pkg/config"
 	"github.com/crd2go/crd2go/pkg/crd2go"
 )
 
 func main() {
 	var input, output, gv, config string
+	var forceRenames bool
 	flag.StringVar(&input, "input", "", "input YAML to process")
 	flag.StringVar(&output, "output", "", "output directory to produce source code to")
 	flag.StringVar(&config, "config", "crd2go.yaml", "YAML file with the CRD2Go config")
 	flag.StringVar(&gv, "gv", "", "Group Version (e.g 'gen.example.com/v1') to generate from.")
+	flag.BoolVar(&forceRenames, "force-renames", false, "allow crd2go to rename existing types when conflicts arise")
 	flag.Parse()
 
-	cfg, err := generate(input, output, gv, config)
+	cfg, err := generate(input, output, gv, config, forceRenames)
 	if err != nil {
+		printConflictHint(err)
 		log.Fatalf("Failed to generate go structs: %v", err)
 	}
 	log.Printf("Code generated at %s", cfg.Output)
 }
 
-func generate(input, output, gv, config string) (*config.Config, error) {
+// printConflictHint checks if err contains an ExistingNameConflictError and, if so,
+// prints a pinning suggestion to stderr to help the user resolve the conflict.
+func printConflictHint(err error) {
+	var conflictErr *gotype.ExistingNameConflictError
+	if !errors.As(err, &conflictErr) {
+		return
+	}
+	fmt.Fprintln(os.Stderr, "conflicting names found with existing type names, please use these pinnings in the config to fix:")
+	fmt.Fprintln(os.Stderr)
+	pinnings, pinErr := gotype.SuggestPinnings(conflictErr.Conflicts)
+	if pinErr == nil {
+		fmt.Fprint(os.Stderr, gotype.FormatPinningsSuggestion(pinnings))
+	}
+	fmt.Fprintln(os.Stderr, "\nOr use flag --force-renames to allow crd2go to rename existing types as needed.")
+}
+
+func generate(input, output, gv, config string, forceRenames bool) (*config.Config, error) {
 	f, err := os.Open(fileinput.MustBeSafe(config))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open configuration file: %w", err)
@@ -62,7 +83,7 @@ func generate(input, output, gv, config string) (*config.Config, error) {
 		return nil, fmt.Errorf("failed to parse gv: %w", err)
 	}
 	cfg.GroupVersion = gv
-	if err := crd2go.GenerateToDir(cfg); err != nil {
+	if err := crd2go.GenerateToDir(cfg, forceRenames); err != nil {
 		return nil, fmt.Errorf("failed to generate code: %w", err)
 	}
 	return cfg, nil

@@ -48,6 +48,7 @@ type CoreConfig struct {
 	Reserved           []string             `yaml:"reserved"`
 	SkipList           []string             `yaml:"skipList"`
 	Renames            map[string]string    `yaml:"renames"`
+	Pinnings           []string             `yaml:"pinnings"`
 	Imports            []ImportedTypeConfig `yaml:"imports"`
 	Plugins            []Plugin             `yaml:"plugins"`
 	DeepCopy           DeepCopy             `yaml:"deepCopy"`

@@ -182,10 +182,12 @@ func TestUniqueTypes_sameHashDistinctPointers(t *testing.T) {
 
 func TestNameEngine(t *testing.T) {
 	tests := []struct {
-		name    string
-		regsFn  func() []nameEngineReg
-		want    []string
-		wantErr bool
+		name          string
+		regsFn        func() []nameEngineReg
+		setupFn       func(t *testing.T) (existingNames map[string]string, pinnedPaths map[string]bool)
+		want          []string
+		wantErr       bool
+		wantConflicts []ExistingNameConflict
 	}{
 		{
 			name: "single root",
@@ -343,12 +345,75 @@ func TestNameEngine(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "existing name conflict records all candidates without narrowing",
+			regsFn: func() []nameEngineReg {
+				structA, configA := newConflictStructsA()
+				structB, configB := newConflictStructsB()
+				return []nameEngineReg{
+					{path: []string{"A"}, gt: structA},
+					{path: []string{"A", "Config"}, gt: configA},
+					{path: []string{"B"}, gt: structB},
+					{path: []string{"B", "Config"}, gt: configB},
+				}
+			},
+			setupFn: func(t *testing.T) (map[string]string, map[string]bool) {
+				f := writeTempGoFile(t, "type Config struct{ X string }")
+				return map[string]string{"Config": f}, nil
+			},
+			wantConflicts: []ExistingNameConflict{
+				{Name: "Config", candidates: []typeInfo{
+					{path: []string{"A", "Config"}},
+					{path: []string{"B", "Config"}},
+				}},
+			},
+		},
+		{
+			name: "pinned candidate bypasses existing name conflict and keeps its name",
+			regsFn: func() []nameEngineReg {
+				structA, configA := newConflictStructsA()
+				structB, configB := newConflictStructsB()
+				return []nameEngineReg{
+					{path: []string{"A"}, gt: structA},
+					{path: []string{"A", "Config"}, gt: configA},
+					{path: []string{"B"}, gt: structB},
+					{path: []string{"B", "Config"}, gt: configB},
+				}
+			},
+			setupFn: func(t *testing.T) (map[string]string, map[string]bool) {
+				f := writeTempGoFile(t, "type Config struct{ Z string }")
+				return map[string]string{"Config": f}, map[string]bool{"A.Config": true}
+			},
+			want: []string{"A", "Config", "B", "BConfig"},
+		},
+		{
+			name: "pinned candidate keeps name while other candidate is prepended",
+			regsFn: func() []nameEngineReg {
+				structA, configA := newConflictStructsA()
+				structB, configB := newConflictStructsB()
+				return []nameEngineReg{
+					{path: []string{"A"}, gt: structA},
+					{path: []string{"A", "Config"}, gt: configA},
+					{path: []string{"B"}, gt: structB},
+					{path: []string{"B", "Config"}, gt: configB},
+				}
+			},
+			setupFn: func(t *testing.T) (map[string]string, map[string]bool) {
+				return nil, map[string]bool{"A.Config": true}
+			},
+			want: []string{"A", "Config", "B", "BConfig"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			regs := tt.regsFn()
 			ne := NewNameEngine().(*nameEngine)
+			if tt.setupFn != nil {
+				existingNames, pinnedPaths := tt.setupFn(t)
+				ne.existingNames = existingNames
+				ne.pinnedPaths = pinnedPaths
+			}
 			var regErr error
 			for _, r := range regs {
 				regErr = ne.Register(r.path, r.gt)
@@ -363,6 +428,20 @@ func TestNameEngine(t *testing.T) {
 			}
 			require.NoError(t, regErr)
 			roots, err := ne.NamedRoots()
+			if tt.wantConflicts != nil {
+				var conflictErr *ExistingNameConflictError
+				require.ErrorAs(t, err, &conflictErr)
+				require.Len(t, conflictErr.Conflicts, len(tt.wantConflicts))
+				for i, want := range tt.wantConflicts {
+					got := conflictErr.Conflicts[i]
+					assert.Equal(t, want.Name, got.Name)
+					assert.Equal(t, sortedCandidatePaths(want.candidates), sortedCandidatePaths(got.candidates))
+					for _, info := range got.candidates {
+						assert.NotNil(t, info.gt, "each candidate typeInfo must carry its GoType")
+					}
+				}
+				return
+			}
 			require.NoError(t, err)
 			got := collectNonPrimitiveNames(roots)
 			assert.Equal(t, tt.want, got)
@@ -436,4 +515,34 @@ func collectNonPrimitiveNames(roots []*GoType) []string {
 type nameEngineReg struct {
 	path []string
 	gt   *GoType
+}
+
+func TestExistingNameConflictError_Error(t *testing.T) {
+	tests := []struct {
+		name      string
+		conflicts []ExistingNameConflict
+		want      string
+	}{
+		{
+			name: "single conflict",
+			conflicts: []ExistingNameConflict{
+				{Name: "Config", candidates: []typeInfo{{path: []string{"A", "Config"}}}},
+			},
+			want: "existing type name conflicts: Config (1 candidate(s))",
+		},
+		{
+			name: "multiple conflicts",
+			conflicts: []ExistingNameConflict{
+				{Name: "Config", candidates: []typeInfo{{path: []string{"A", "Config"}}, {path: []string{"B", "Config"}}}},
+				{Name: "Spec", candidates: []typeInfo{{path: []string{"A", "Spec"}}}},
+			},
+			want: "existing type name conflicts: Config (2 candidate(s)), Spec (1 candidate(s))",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := &ExistingNameConflictError{Conflicts: tt.conflicts}
+			assert.Equal(t, tt.want, err.Error())
+		})
+	}
 }

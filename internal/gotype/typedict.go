@@ -26,10 +26,11 @@ import (
 // It embeds a NameEngine for naming and deduplication, and separately tracks which
 // types have already been emitted during generation (render).
 type TypeDict struct {
-	nameEngine  NameEngine
-	knownTypes  map[string]*GoType
-	knownByHash map[string]*GoType
-	renames     map[string]string
+	nameEngine    NameEngine
+	knownTypes    map[string]*GoType
+	knownByHash   map[string]*GoType
+	renames       map[string]string
+	existingNames map[string]string // typename → file path, from ScanExistingStructNames
 	// generated records type names that have been rendered (keyed by final Go type name).
 	generated map[string]bool
 }
@@ -41,21 +42,55 @@ type Request struct {
 	TypeDict     *TypeDict
 }
 
-// NewTypeDict creates a new TypeDict with the given renames and known types (preloaded).
-func NewTypeDict(renames map[string]string, goTypes ...*GoType) *TypeDict {
+// TypeDictOption is a functional option for configuring a TypeDict at construction time.
+// All options are applied inside NewTypeDict, before the caller has a reference to the
+// TypeDict, which guarantees they take effect before RegisterAndResolve is called.
+type TypeDictOption func(*TypeDict)
+
+// WithExistingNames returns a TypeDictOption that attaches a map of existing on-disk type
+// names (typename → file path, as returned by ScanExistingStructNames) for conflict detection.
+func WithExistingNames(existing map[string]string) TypeDictOption {
+	return func(td *TypeDict) {
+		td.existingNames = existing
+		if ne, ok := td.nameEngine.(*nameEngine); ok {
+			ne.existingNames = existing
+		}
+	}
+}
+
+// WithPinnings returns a TypeDictOption that registers the given dot-separated type paths
+// as pinned, preventing them from being renamed during conflict resolution.
+func WithPinnings(pinnings []string) TypeDictOption {
+	pinned := make(map[string]bool, len(pinnings))
+	for _, p := range pinnings {
+		pinned[p] = true
+	}
+	return func(td *TypeDict) {
+		if ne, ok := td.nameEngine.(*nameEngine); ok {
+			ne.pinnedPaths = pinned
+		}
+	}
+}
+
+// NewTypeDict creates a new TypeDict with renames, preloaded types, and optional configuration.
+func NewTypeDict(renames map[string]string, preloaded []*GoType, opts ...TypeDictOption) *TypeDict {
 	knownTypes := make(map[string]*GoType)
 	knownByHash := make(map[string]*GoType)
-	for _, gt := range goTypes {
+	for _, gt := range preloaded {
 		knownTypes[gt.Name] = gt
 		knownByHash[HashType(gt)] = gt
 	}
-	return &TypeDict{
+	td := &TypeDict{
 		nameEngine:  NewNameEngine(),
 		knownTypes:  knownTypes,
 		knownByHash: knownByHash,
 		renames:     renames,
 		generated:   make(map[string]bool),
 	}
+	for _, opt := range opts {
+		opt(td)
+	}
+	return td
 }
 
 // Has checks if the TypeDict contains a GoType with the same structure (via NameEngine).
