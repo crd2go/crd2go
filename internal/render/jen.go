@@ -61,6 +61,9 @@ func (jr JenRenderer) RenderCRD(req *CRDRenderRequest) error {
 	if deepCopyEnabled(&req.Request) {
 		f.Comment("+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object")
 	}
+	if err := renderAnnotationPlugins(f, req); err != nil {
+		return fmt.Errorf("failed to render annotation plugins: %w", err)
+	}
 	f.Comment("+kubebuilder:object:root=true")
 	f.Comment("+kubebuilder:resource").Line()
 
@@ -114,6 +117,25 @@ func renderCRDListObject(f *jen.File, kind string) {
 		jen.Qual(metav1Package, "ListMeta").Tag(map[string]string{"json": "metadata,omitempty"}),
 		jen.Id("Items").Index().Id(kind).Tag(map[string]string{"json": "items"}),
 	)
+}
+
+// renderAnnotationPlugins runs plugins that implement Annotator before the type
+// definition, allowing them to add markers/comments above the root kind struct.
+func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
+	codeGenPlugins, err := plugins.CodegenPlugins(req.Plugins)
+	if err != nil {
+		return fmt.Errorf("failed to enumerate codegen plugins: %w", err)
+	}
+	for _, plugin := range codeGenPlugins {
+		annotator, ok := plugin.(plugins.Annotator)
+		if !ok {
+			continue
+		}
+		if err := annotator.Annotate(f, req.Kind); err != nil {
+			return fmt.Errorf("failed to annotate with plugin %q: %w", plugin.Name(), err)
+		}
+	}
+	return nil
 }
 
 // renderCodegenPlugins appends code generation from optional plugins per CRD

@@ -58,7 +58,8 @@ type CoreConfig struct {
 
 // Plugin represents a named plugin code that can be optionally invoked
 type Plugin struct {
-	Name string `yaml:"name"`
+	Name    string            `yaml:"name"`
+	Options map[string]string `yaml:"options"`
 }
 
 // DeepCopy controls whether deepcopy markers are emitted in the generated code.

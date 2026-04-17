@@ -42,6 +42,19 @@ func TestCodegenPlugins(t *testing.T) {
 			want:    []string{"get-conditions"},
 		},
 		{
+			title:   "gen-client plugin",
+			configs: []config.Plugin{{Name: "gen-client"}},
+			want:    []string{"gen-client"},
+		},
+		{
+			title: "multiple plugins",
+			configs: []config.Plugin{
+				{Name: "get-conditions"},
+				{Name: "gen-client"},
+			},
+			want: []string{"get-conditions", "gen-client"},
+		},
+		{
 			title:   "Unknown Plugin Error",
 			configs: []config.Plugin{{Name: "non-existent-plugin"}},
 			wantErr: "\"non-existent-plugin\" is not a registered plugin",

@@ -207,6 +207,82 @@ func TestGenerateWithDeepCopy(t *testing.T) {
 	}
 }
 
+func TestGenerateWithGenClient(t *testing.T) {
+	for _, tc := range []struct {
+		name                  string
+		plugins               []config.Plugin
+		wantGenClient         bool
+		wantNonNamespaced     bool
+		wantBeforeKubebuilder bool
+	}{
+		{
+			name:          "no gen-client plugin produces no marker",
+			plugins:       []config.Plugin{},
+			wantGenClient: false,
+		},
+		{
+			name:          "gen-client plugin produces +genclient marker",
+			plugins:       []config.Plugin{{Name: "gen-client"}},
+			wantGenClient: true,
+		},
+		{
+			name:              "gen-client nonNamespaced produces both markers",
+			plugins:           []config.Plugin{{Name: "gen-client", Options: map[string]string{"nonNamespaced": "true"}}},
+			wantGenClient:     true,
+			wantNonNamespaced: true,
+		},
+		{
+			name:                  "gen-client marker appears before +kubebuilder:object:root",
+			plugins:               []config.Plugin{{Name: "gen-client"}},
+			wantGenClient:         true,
+			wantBeforeKubebuilder: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			buffers := make(map[string]*bytes.Buffer)
+
+			in := bytes.NewBuffer(testdata.CRDsYAML)
+			req := gotype.Request{
+				CodeWriterFn: BufferForCRD(buffers),
+				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
+				CoreConfig: config.CoreConfig{
+					Version:  crd.FirstVersion,
+					SkipList: disabledKinds,
+					Plugins:  tc.plugins,
+				},
+			}
+			require.NoError(t, Generate(&req, in))
+
+			// Check a CRD file (skip doc.go and groupversion_info.go)
+			for name, buf := range buffers {
+				if name == "doc.go" || name == "groupversion_info.go" {
+					continue
+				}
+				content := buf.String()
+
+				if tc.wantGenClient {
+					assert.Contains(t, content, "// +genclient", "expected +genclient in %s", name)
+				} else {
+					assert.NotContains(t, content, "// +genclient", "unexpected +genclient in %s", name)
+				}
+
+				if tc.wantNonNamespaced {
+					assert.Contains(t, content, "// +genclient:nonNamespaced", "expected +genclient:nonNamespaced in %s", name)
+				} else {
+					assert.NotContains(t, content, "// +genclient:nonNamespaced", "unexpected +genclient:nonNamespaced in %s", name)
+				}
+
+				if tc.wantBeforeKubebuilder {
+					genClientPos := bytes.Index(buf.Bytes(), []byte("+genclient"))
+					kubebuilderPos := bytes.Index(buf.Bytes(), []byte("+kubebuilder:object:root"))
+					assert.Greater(t, kubebuilderPos, genClientPos, "+genclient must appear before +kubebuilder:object:root in %s", name)
+				}
+				break
+			}
+		})
+	}
+}
+
 func TestGenerateWithApplyConfiguration(t *testing.T) {
 	for _, tc := range []struct {
 		name                   string
@@ -373,6 +449,20 @@ imports: []`,
 				CoreConfig: config.CoreConfig{
 					ApplyConfiguration: config.ApplyConfiguration{
 						Generate: false,
+					},
+				},
+			},
+		},
+		{
+			name: "gen-client plugin with options",
+			input: `plugins:
+  - name: gen-client
+    options:
+      nonNamespaced: "true"`,
+			want: &config.Config{
+				CoreConfig: config.CoreConfig{
+					Plugins: []config.Plugin{
+						{Name: "gen-client", Options: map[string]string{"nonNamespaced": "true"}},
 					},
 				},
 			},

@@ -33,12 +33,19 @@ type Plugin interface {
 	Process(cgr *CodegenRequest) error
 }
 
+// Annotator is an optional interface plugins may implement to add
+// markers/comments before the top-level type definition in a CRD file.
+type Annotator interface {
+	Annotate(f *jen.File, kind string) error
+}
+
 type PluginBuilderFunc func(config.Plugin) Plugin
 
 var codegenPlugins = map[string]PluginBuilderFunc{
 	GetConditionsPlugin: func(config.Plugin) Plugin {
 		return &GetConditions{}
 	},
+	GenClientPlugin: newGenClientPlugin,
 }
 
 func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {
