@@ -56,8 +56,10 @@ func TestGenerateFromCRDs(t *testing.T) {
 	in := bytes.NewBuffer(testdata.CRDsYAML)
 	req := gotype.Request{
 		CodeWriterFn: BufferForCRD(buffers),
-		TypeDict:     gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes()),
-		CoreConfig:   cfg.CoreConfig,
+		TypeDict: gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(),
+			gotype.WithNeverSkipSegments(cfg.NeverSkipSegments),
+		),
+		CoreConfig: cfg.CoreConfig,
 	}
 	require.NoError(t, Generate(&req, in))
 

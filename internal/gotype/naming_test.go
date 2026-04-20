@@ -16,6 +16,7 @@
 package gotype
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -182,12 +183,13 @@ func TestUniqueTypes_sameHashDistinctPointers(t *testing.T) {
 
 func TestNameEngine(t *testing.T) {
 	tests := []struct {
-		name          string
-		regsFn        func() []nameEngineReg
-		setupFn       func(t *testing.T) (existingNames map[string]string, pinnedPaths map[string]bool)
-		want          []string
-		wantErr       bool
-		wantConflicts []ExistingNameConflict
+		name              string
+		regsFn            func() []nameEngineReg
+		setupFn           func(t *testing.T) (existingNames map[string]string, pinnedPaths map[string]bool)
+		neverSkipPatterns []string
+		want              []string
+		wantErr           bool
+		wantConflicts     []ExistingNameConflict
 	}{
 		{
 			name: "single root",
@@ -402,6 +404,26 @@ func TestNameEngine(t *testing.T) {
 			want: []string{"Deep", "FieldName", "Some", "SomeFieldName"},
 		},
 		{
+			// OrgSpec.V20250312.Entry vs TeamSpec.V20250312.Entry:
+			// Round 1 (V20250312) is shared but matches neverSkipSegments → preserve it.
+			// After round 1 both names are V20250312Entry (still conflicting).
+			// Round 2 (OrgSpec/TeamSpec) differs → produces OrgSpecV20250312Entry / TeamSpecV20250312Entry.
+			// Without neverSkipSegments the result would be OrgSpecEntry / TeamSpecEntry.
+			name:              "neverSkipSegments preserves shared version segment",
+			neverSkipPatterns: []string{"V[0-9]+"},
+			regsFn: func() []nameEngineReg {
+				entryA := NewStruct("Entry", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+				entryB := NewStruct("Entry", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+				return []nameEngineReg{
+					{path: []string{"OrgSpec"}, gt: NewStruct("OrgSpec", []*GoField{NewGoField("Entry", entryA)})},
+					{path: []string{"TeamSpec"}, gt: NewStruct("TeamSpec", []*GoField{NewGoField("Entry", entryB)})},
+					{path: []string{"OrgSpec", "V20250312", "Entry"}, gt: entryA},
+					{path: []string{"TeamSpec", "V20250312", "Entry"}, gt: entryB},
+				}
+			},
+			want: []string{"OrgSpec", "OrgSpecV20250312Entry", "TeamSpec", "TeamSpecV20250312Entry"},
+		},
+		{
 			name: "duplicate root errors",
 			regsFn: func() []nameEngineReg {
 				team := newTestTeam()
@@ -486,6 +508,13 @@ func TestNameEngine(t *testing.T) {
 				existingNames, pinnedPaths := tt.setupFn(t)
 				ne.existingNames = existingNames
 				ne.pinnedPaths = pinnedPaths
+			}
+			if len(tt.neverSkipPatterns) > 0 {
+				compiled := make([]*regexp.Regexp, 0, len(tt.neverSkipPatterns))
+				for _, p := range tt.neverSkipPatterns {
+					compiled = append(compiled, regexp.MustCompile(p))
+				}
+				ne.neverSkipSegments = compiled
 			}
 			var regErr error
 			for _, r := range regs {

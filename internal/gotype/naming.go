@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -115,13 +116,14 @@ type typeInfo struct {
 }
 
 type nameEngine struct {
-	byHash           map[string][]typeInfo
-	hashCache        map[*GoType]string
-	roots            []*GoType
-	byName           map[string]*GoType
-	existingNames    map[string]string // typename → file path
-	pinnedPaths      map[string]bool   // dot-joined paths that must not be renamed
-	pendingConflicts []ExistingNameConflict
+	byHash            map[string][]typeInfo
+	hashCache         map[*GoType]string
+	roots             []*GoType
+	byName            map[string]*GoType
+	existingNames     map[string]string // typename → file path
+	pinnedPaths       map[string]bool   // dot-joined paths that must not be renamed
+	neverSkipSegments []*regexp.Regexp  // segments matching these patterns are never skipped
+	pendingConflicts  []ExistingNameConflict
 }
 
 func NewNameEngine() NameEngine {
@@ -297,7 +299,9 @@ func (n *nameEngine) prependPaths(candidateTypes []typeInfo) error {
 	}
 	for round := 1; round <= maxRounds; round++ {
 		// Check whether every candidate has the same segment at this position.
-		// If so, prepending it cannot help disambiguate — skip this round.
+		// If so, prepending it cannot help disambiguate — skip this round,
+		// unless the shared segment matches a neverSkipSegments pattern, in
+		// which case we still prepend it for future naming stability.
 		vals := make(map[string]bool, len(candidateTypes))
 		for _, c := range candidateTypes {
 			idx := len(c.path) - 1 - round
@@ -308,7 +312,13 @@ func (n *nameEngine) prependPaths(candidateTypes []typeInfo) error {
 			vals[seg] = true
 		}
 		if len(vals) <= 1 {
-			continue
+			var sharedSeg string
+			for s := range vals {
+				sharedSeg = s
+			}
+			if !n.matchesNeverSkip(sharedSeg) {
+				continue
+			}
 		}
 
 		for i := range candidateTypes {
@@ -344,6 +354,15 @@ func (n *nameEngine) findPinnedCandidate(candidates []typeInfo) int {
 		}
 	}
 	return -1
+}
+
+func (n *nameEngine) matchesNeverSkip(seg string) bool {
+	for _, re := range n.neverSkipSegments {
+		if re.MatchString(seg) {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *nameEngine) isExistingNameConflict(candidateTypes []typeInfo) bool {

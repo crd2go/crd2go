@@ -17,6 +17,7 @@ package gotype
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 
 	"github.com/crd2go/crd2go/pkg/config"
@@ -68,6 +69,23 @@ func WithPinnings(pinnings []string) TypeDictOption {
 	return func(td *TypeDict) {
 		if ne, ok := td.nameEngine.(*nameEngine); ok {
 			ne.pinnedPaths = pinned
+		}
+	}
+}
+
+// WithNeverSkipSegments returns a TypeDictOption that registers the given regex patterns.
+// Path segments matching any pattern are never skipped during conflict resolution,
+// even when all candidates share the same segment value. The canonical use case is
+// version segments (e.g. "V[0-9]+") which should be preserved for future naming stability.
+// Patterns must be valid RE2 regular expressions; invalid patterns cause a panic.
+func WithNeverSkipSegments(patterns []string) TypeDictOption {
+	compiled := make([]*regexp.Regexp, 0, len(patterns))
+	for _, p := range patterns {
+		compiled = append(compiled, regexp.MustCompile(p))
+	}
+	return func(td *TypeDict) {
+		if ne, ok := td.nameEngine.(*nameEngine); ok {
+			ne.neverSkipSegments = compiled
 		}
 	}
 }

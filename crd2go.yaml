@@ -25,6 +25,13 @@ skipList: []
 # list of reserved Type names to avoid using
 reserved: []
 
+# neverSkipSegments lists regex patterns for path segments that must never be skipped
+# during name conflict resolution, even when all conflicting candidates share the same
+# segment value. The canonical use case is API version segments (e.g. V20250312) which
+# should be preserved in type names for future naming stability.
+neverSkipSegments:
+  - "V[0-9]+"
+
 # renames to apply before type name evaluation and de-duplication 
 # a matching key is replaced by the given value
 renames:

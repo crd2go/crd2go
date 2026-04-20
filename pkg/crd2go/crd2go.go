@@ -85,7 +85,10 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	if cfg.Output == "" {
 		return fmt.Errorf("output directory is required")
 	}
-	opts := []gotype.TypeDictOption{gotype.WithPinnings(cfg.Pinnings)}
+	opts := []gotype.TypeDictOption{
+		gotype.WithPinnings(cfg.Pinnings),
+		gotype.WithNeverSkipSegments(cfg.NeverSkipSegments),
+	}
 	if !forceRenames {
 		existing, err := gotype.ScanExistingStructNames(cfg.Output)
 		if err != nil {
