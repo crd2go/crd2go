@@ -119,7 +119,7 @@ func renderCRDListObject(f *jen.File, kind string) {
 	)
 }
 
-// renderAnnotationPlugins runs plugins that implement Annotator before the type
+// renderAnnotationPlugins runs all plugins' Annotate method before the type
 // definition, allowing them to add markers/comments above the root kind struct.
 func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
 	codeGenPlugins, err := plugins.CodegenPlugins(req.Plugins)
@@ -127,11 +127,7 @@ func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
 		return fmt.Errorf("failed to enumerate codegen plugins: %w", err)
 	}
 	for _, plugin := range codeGenPlugins {
-		annotator, ok := plugin.(plugins.Annotator)
-		if !ok {
-			continue
-		}
-		if err := annotator.Annotate(f, req.Kind); err != nil {
+		if err := plugin.Annotate(f, req.Kind); err != nil {
 			return fmt.Errorf("failed to annotate with plugin %q: %w", plugin.Name(), err)
 		}
 	}

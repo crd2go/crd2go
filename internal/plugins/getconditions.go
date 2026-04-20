@@ -33,6 +33,10 @@ func (*GetConditions) Name() string {
 	return GetConditionsPlugin
 }
 
+func (*GetConditions) Annotate(_ *jen.File, _ string) error {
+	return nil
+}
+
 func (*GetConditions) Process(cr *CodegenRequest) error {
 	shortName := shorten(cr.Type.Name)
 	f := cr.File

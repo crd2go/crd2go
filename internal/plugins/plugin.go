@@ -31,11 +31,6 @@ type CodegenRequest struct {
 type Plugin interface {
 	Name() string
 	Process(cgr *CodegenRequest) error
-}
-
-// Annotator is an optional interface plugins may implement to add
-// markers/comments before the top-level type definition in a CRD file.
-type Annotator interface {
 	Annotate(f *jen.File, kind string) error
 }
 

@@ -60,11 +60,8 @@ func TestGenClientAnnotate(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, pluginList, 1)
 
-			annotator, ok := pluginList[0].(plugins.Annotator)
-			require.True(t, ok, "gen-client plugin must implement Annotator")
-
 			f := jen.NewFile("v1")
-			require.NoError(t, annotator.Annotate(f, "MyKind"))
+			require.NoError(t, pluginList[0].Annotate(f, "MyKind"))
 
 			buf := &bytes.Buffer{}
 			require.NoError(t, f.Render(buf))
@@ -101,9 +98,7 @@ func TestGenClientAnnotateIsBeforeType(t *testing.T) {
 	pluginList, err := plugins.CodegenPlugins([]config.Plugin{{Name: "gen-client"}})
 	require.NoError(t, err)
 
-	annotator, ok := pluginList[0].(plugins.Annotator)
-	require.True(t, ok)
-	require.NoError(t, annotator.Annotate(f, "MyKind"))
+	require.NoError(t, pluginList[0].Annotate(f, "MyKind"))
 
 	f.Type().Id("MyKind").Struct()
 
