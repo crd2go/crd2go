@@ -31,6 +31,7 @@ type CodegenRequest struct {
 type Plugin interface {
 	Name() string
 	Process(cgr *CodegenRequest) error
+	Annotate(f *jen.File, kind string) error
 }
 
 type PluginBuilderFunc func(config.Plugin) Plugin
@@ -39,6 +40,7 @@ var codegenPlugins = map[string]PluginBuilderFunc{
 	GetConditionsPlugin: func(config.Plugin) Plugin {
 		return &GetConditions{}
 	},
+	GenClientPlugin: newGenClientPlugin,
 }
 
 func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {

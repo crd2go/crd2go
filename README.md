@@ -48,6 +48,69 @@ Extra configuration settings:
   - *applyConfiguration.generate* (`true`/`false`, defaults to `false`). When `true`, crd2go adds `+kubebuilder:ac:generate=true` to `doc.go` and a `SchemeGroupVersion` alias to `groupversion_info.go`.
   - *applyConfiguration.outputPackage* sets the `+kubebuilder:ac:output:package` marker value.
 
+### Plugins
+
+Optional plugins extend the generated code on a per-CRD basis. Enable them in `crd2go.yaml` under `plugins`:
+
+```yaml
+plugins:
+  - name: <plugin-name>
+    options:            # optional key/value pairs, plugin-specific
+      key: value
+```
+
+#### `get-conditions`
+
+Generates a `GetConditions() []metav1.Condition` method on the root kind type, for use with condition-aware controllers. The CRD's status schema must contain a `conditions` field of the standard `metav1.Condition` array type.
+
+```yaml
+plugins:
+  - name: get-conditions
+```
+
+No options are supported for this plugin.
+
+#### `gen-client`
+
+Adds [`+genclient`](https://github.com/kubernetes/code-generator) markers before the root kind type definition, so that `k8s.io/code-generator`'s `client-gen` tool generates a typed client for the resource.
+
+```yaml
+plugins:
+  - name: gen-client
+```
+
+The following option is supported:
+
+| Option | Values | Default | Description |
+|---|---|---|---|
+| `nonNamespaced` | `"true"` / `"false"` | `"false"` | Adds `+genclient:nonNamespaced` for cluster-scoped resources. |
+
+Example for a cluster-scoped resource:
+
+```yaml
+plugins:
+  - name: gen-client
+    options:
+      nonNamespaced: "true"
+```
+
+With `nonNamespaced: "true"` the generated file will contain:
+
+```go
+// +genclient
+// +genclient:nonNamespaced
+// +kubebuilder:object:root=true
+type MyResource struct { ... }
+```
+
+Without the option:
+
+```go
+// +genclient
+// +kubebuilder:object:root=true
+type MyResource struct { ... }
+```
+
 ### Type naming and schema evolution
 
 crd2go picks Go type names from CRD shapes and resolves collisions (for example by prepending path segments) so output always type-checks. **Those names are not guaranteed to stay the same when inputs change.** Adding or renaming fields, introducing new kinds, or loading more CRDs into the same pass can create new collisions or change resolution order, so **existing generated type identifiers may rename** even when their underlying schema concept did not change.
