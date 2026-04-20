@@ -329,6 +329,79 @@ func TestNameEngine(t *testing.T) {
 			want: []string{"Cluster", "Config", "Team"},
 		},
 		{
+			// SomeType.SomeTypeSpec.SubType.Leaf vs SomeOtherType.SomeOtherTypeSpec.SubType.Leaf
+			// Round 1 (immediate parent "SubType") is shared → skip.
+			// Round 2 ("SomeTypeSpec"/"SomeOtherTypeSpec") differs → use it.
+			name: "conflict skips shared intermediate segments",
+			regsFn: func() []nameEngineReg {
+				leafA := NewStruct("Leaf", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+				leafB := NewStruct("Leaf", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+				return []nameEngineReg{
+					{path: []string{"SomeType"}, gt: NewStruct("SomeType", []*GoField{NewGoField("Leaf", leafA)})},
+					{path: []string{"SomeOtherType"}, gt: NewStruct("SomeOtherType", []*GoField{NewGoField("Leaf", leafB)})},
+					{path: []string{"SomeType", "SomeTypeSpec", "SubType", "Leaf"}, gt: leafA},
+					{path: []string{"SomeOtherType", "SomeOtherTypeSpec", "SubType", "Leaf"}, gt: leafB},
+				}
+			},
+			want: []string{"SomeOtherType", "SomeOtherTypeSpecLeaf", "SomeType", "SomeTypeSpecLeaf"},
+		},
+		{
+			// Three conflicting types under a shared root.
+			// Round 1 ("Sub") is shared → skip. Round 2 ("A"/"B"/"C") differs → use it.
+			name: "three-way conflict skips shared intermediate segment",
+			regsFn: func() []nameEngineReg {
+				leafA := NewStruct("Leaf", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+				leafB := NewStruct("Leaf", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+				leafC := NewStruct("Leaf", []*GoField{NewGoField("Z", NewPrimitive("string", StringKind))})
+				root := NewStruct("Root", []*GoField{NewGoField("A", leafA), NewGoField("B", leafB), NewGoField("C", leafC)})
+				return []nameEngineReg{
+					{path: []string{"Root"}, gt: root},
+					{path: []string{"Root", "A", "Sub", "Leaf"}, gt: leafA},
+					{path: []string{"Root", "B", "Sub", "Leaf"}, gt: leafB},
+					{path: []string{"Root", "C", "Sub", "Leaf"}, gt: leafC},
+				}
+			},
+			want: []string{"Root", "ALeaf", "BLeaf", "CLeaf"},
+		},
+		{
+			// When round 1 is not sufficient, subsequent rounds accumulate until unique.
+			// Round 1 pos=1 ("X"/"Y"/"X") differs but leaves two "XLeaf"; round 2 pos=0
+			// ("A"/"A"/"B") then prepends on top → "AXLeaf","AYLeaf","BXLeaf".
+			name: "three-way conflict accumulates when single round insufficient",
+			regsFn: func() []nameEngineReg {
+				leafA := NewStruct("Leaf", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+				leafB := NewStruct("Leaf", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+				leafC := NewStruct("Leaf", []*GoField{NewGoField("Z", NewPrimitive("string", StringKind))})
+				return []nameEngineReg{
+					{path: []string{"A"}, gt: NewStruct("A", []*GoField{NewGoField("X", leafA), NewGoField("Y", leafB)})},
+					{path: []string{"B"}, gt: NewStruct("B", []*GoField{NewGoField("X", leafC)})},
+					{path: []string{"A", "X", "Leaf"}, gt: leafA},
+					{path: []string{"A", "Y", "Leaf"}, gt: leafB},
+					{path: []string{"B", "X", "Leaf"}, gt: leafC},
+				}
+			},
+			want: []string{"A", "AXLeaf", "AYLeaf", "B", "BXLeaf"},
+		},
+		{
+			// Some.Deep.Path.FieldName vs Deep.Path.FieldName:
+			// Round 1 ("Path") shared → skip. Round 2 ("Deep") shared → skip.
+			// Round 3: c1 has "Some", c2 has "" (ran out of path) → differ.
+			// c1 gets "Some" prepended → SomeFieldName; c2 has no more ancestors → stays FieldName.
+			// The shallower type keeps the bare name; the deeper one is disambiguated.
+			name: "asymmetric depth: shallower candidate keeps bare name",
+			regsFn: func() []nameEngineReg {
+				fieldA := NewStruct("FieldName", []*GoField{NewGoField("X", NewPrimitive("string", StringKind))})
+				fieldB := NewStruct("FieldName", []*GoField{NewGoField("Y", NewPrimitive("string", StringKind))})
+				return []nameEngineReg{
+					{path: []string{"Some"}, gt: NewStruct("Some", []*GoField{NewGoField("FieldName", fieldA)})},
+					{path: []string{"Deep"}, gt: NewStruct("Deep", []*GoField{NewGoField("FieldName", fieldB)})},
+					{path: []string{"Some", "Deep", "Path", "FieldName"}, gt: fieldA},
+					{path: []string{"Deep", "Path", "FieldName"}, gt: fieldB},
+				}
+			},
+			want: []string{"Deep", "FieldName", "Some", "SomeFieldName"},
+		},
+		{
 			name: "duplicate root errors",
 			regsFn: func() []nameEngineReg {
 				team := newTestTeam()

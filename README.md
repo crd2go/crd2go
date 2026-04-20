@@ -107,4 +107,8 @@ Committed trees such as **`internal/testdata/v1`** are different: they are meant
 
 crd2go assigns each generated struct a Go name from the CRD shape. Types that are structurally identical share one name; among the candidate spellings, the shortest wins.
 
-If two different shapes would use the same name, the generator prepends pieces of the field path from the nested type up toward the root—one segment per pass—until every name is unique. That rule is deterministic and always produces valid Go, but it does not minimize name length in every case (shared path segments can add extra prefixes before types diverge). User **`renames`** and **`imports`** still override or replace generated names where you need something explicit.
+If two different shapes would use the same name, the generator prepends ancestor path segments (immediate parent first, then toward the root) until every name is unique. Path positions where all conflicting candidates share the same segment are skipped, since they cannot help distinguish the names — producing shorter results than blindly accumulating every ancestor.
+
+For example, given two conflicting types at paths `SomeType.SomeTypeSpec.SubType.Leaf` and `SomeOtherType.SomeOtherTypeSpec.SubType.Leaf`, the shared `SubType` segment is skipped, and the first differing ancestor (`SomeTypeSpec` / `SomeOtherTypeSpec`) is used, yielding `SomeTypeSpecLeaf` and `SomeOtherTypeSpecLeaf` instead of `SomeTypeSpecSubTypeLeaf` and `SomeOtherTypeSpecSubTypeLeaf`.
+
+The algorithm is deterministic and always produces valid Go. User **`renames`** and **`imports`** still override or replace generated names where you need something explicit.

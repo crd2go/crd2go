@@ -96,7 +96,9 @@ type NameEngine interface {
 	// Names are unique and deterministic. Among types with the same structure (aliases), the
 	// shortest name wins. When different types would share the same Go identifier, ancestor
 	// path segments are prepended (immediate parent first, then toward the root) until names
-	// differ; those disambiguated names are not guaranteed to be the shortest possible.
+	// differ. Positions where every conflicting candidate shares the same segment are skipped,
+	// since they cannot help disambiguate — producing shorter names than the legacy behaviour
+	// of blindly accumulating every ancestor.
 	NamedRoots() ([]*GoType, error)
 
 	// Has returns true if a type with the same structure (hash) was registered.
@@ -276,8 +278,10 @@ func (n *nameEngine) solveConflictingNames(candidateTypes []typeInfo) error {
 	return n.prependPaths(candidateTypes)
 }
 
-// prependPaths resolves name conflicts by prepending ancestor path segments to each
-// candidate's name until all names are unique. A pinned candidate, if any, is skipped
+// prependPaths resolves name conflicts by prepending ancestor path segments
+// (immediate parent first, then toward the root) until all names are unique.
+// Positions where every candidate shares the same segment value are skipped,
+// since they cannot help disambiguate. A pinned candidate, if any, is skipped
 // so its name is never modified.
 func (n *nameEngine) prependPaths(candidateTypes []typeInfo) error {
 	frozenIdx := n.findPinnedCandidate(candidateTypes)
@@ -287,13 +291,26 @@ func (n *nameEngine) prependPaths(candidateTypes []typeInfo) error {
 			maxPathLen = len(c.path)
 		}
 	}
-	// Prepend ancestor path segments (root first). Skip the last segment since it often equals the type name.
 	maxRounds := maxPathLen
 	if maxRounds > 0 {
 		maxRounds--
 	}
-	// Prepend from immediate parent toward root (leaf-to-root) to match legacy behavior.
 	for round := 1; round <= maxRounds; round++ {
+		// Check whether every candidate has the same segment at this position.
+		// If so, prepending it cannot help disambiguate — skip this round.
+		vals := make(map[string]bool, len(candidateTypes))
+		for _, c := range candidateTypes {
+			idx := len(c.path) - 1 - round
+			seg := ""
+			if idx >= 0 {
+				seg = c.path[idx]
+			}
+			vals[seg] = true
+		}
+		if len(vals) <= 1 {
+			continue
+		}
+
 		for i := range candidateTypes {
 			if i == frozenIdx {
 				continue
