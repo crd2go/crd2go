@@ -55,9 +55,11 @@ Optional plugins extend the generated code on a per-CRD basis. Enable them in `c
 ```yaml
 plugins:
   - name: <plugin-name>
-    options:            # optional key/value pairs, plugin-specific
+    options:            # optional, plugin-specific; typed per plugin
       key: value
 ```
+
+Option values are typed (booleans, strings, numbers — not stringly-typed), and unknown keys are rejected at config-load time.
 
 #### `get-conditions`
 
@@ -81,9 +83,9 @@ plugins:
 
 The following option is supported:
 
-| Option | Values | Default | Description |
+| Option | Type | Default | Description |
 |---|---|---|---|
-| `nonNamespaced` | `"true"` / `"false"` | `"false"` | Adds `+genclient:nonNamespaced` for cluster-scoped resources. |
+| `nonNamespaced` | bool | `false` | Adds `+genclient:nonNamespaced` for cluster-scoped resources. |
 
 Example for a cluster-scoped resource:
 
@@ -91,10 +93,10 @@ Example for a cluster-scoped resource:
 plugins:
   - name: gen-client
     options:
-      nonNamespaced: "true"
+      nonNamespaced: true
 ```
 
-With `nonNamespaced: "true"` the generated file will contain:
+With `nonNamespaced: true` the generated file will contain:
 
 ```go
 // +genclient

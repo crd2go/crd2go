@@ -21,6 +21,7 @@ import (
 	"github.com/dave/jennifer/jen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 
 	"github.com/crd2go/crd2go/internal/plugins"
 	"github.com/crd2go/crd2go/pkg/config"
@@ -28,34 +29,34 @@ import (
 
 func TestGenClientAnnotate(t *testing.T) {
 	tests := []struct {
-		title   string
-		options map[string]string
-		wants   []string
-		notwant []string
+		title      string
+		optionsSrc string
+		wants      []string
+		notwant    []string
 	}{
 		{
-			title:   "no options produces +genclient only",
-			options: nil,
-			wants:   []string{"// +genclient"},
-			notwant: []string{"// +genclient:nonNamespaced"},
+			title:      "no options produces +genclient only",
+			optionsSrc: "",
+			wants:      []string{"// +genclient"},
+			notwant:    []string{"// +genclient:nonNamespaced"},
 		},
 		{
-			title:   "nonNamespaced false produces +genclient only",
-			options: map[string]string{"nonNamespaced": "false"},
-			wants:   []string{"// +genclient"},
-			notwant: []string{"// +genclient:nonNamespaced"},
+			title:      "nonNamespaced false produces +genclient only",
+			optionsSrc: "nonNamespaced: false",
+			wants:      []string{"// +genclient"},
+			notwant:    []string{"// +genclient:nonNamespaced"},
 		},
 		{
-			title:   "nonNamespaced true produces both markers",
-			options: map[string]string{"nonNamespaced": "true"},
-			wants:   []string{"// +genclient", "// +genclient:nonNamespaced"},
+			title:      "nonNamespaced true produces both markers",
+			optionsSrc: "nonNamespaced: true",
+			wants:      []string{"// +genclient", "// +genclient:nonNamespaced"},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.title, func(t *testing.T) {
 			pluginList, err := plugins.CodegenPlugins([]config.Plugin{
-				{Name: "gen-client", Options: tc.options},
+				{Name: "gen-client", Options: pluginOptionsFromYAML(t, tc.optionsSrc)},
 			})
 			require.NoError(t, err)
 			require.Len(t, pluginList, 1)
@@ -73,6 +74,35 @@ func TestGenClientAnnotate(t *testing.T) {
 			for _, notwant := range tc.notwant {
 				assert.NotContains(t, output, notwant)
 			}
+		})
+	}
+}
+
+func TestGenClientOptionsErrors(t *testing.T) {
+	tests := []struct {
+		title      string
+		optionsSrc string
+		wantErr    string
+	}{
+		{
+			title:      "unknown field is rejected",
+			optionsSrc: "nonNamspaced: true", // typo
+			wantErr:    "field nonNamspaced not found",
+		},
+		{
+			title:      "wrong type is rejected",
+			optionsSrc: `nonNamespaced: "true"`, // quoted string, not bool
+			wantErr:    "cannot unmarshal",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.title, func(t *testing.T) {
+			_, err := plugins.CodegenPlugins([]config.Plugin{
+				{Name: "gen-client", Options: pluginOptionsFromYAML(t, tc.optionsSrc)},
+			})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
 }
@@ -109,4 +139,19 @@ func TestGenClientAnnotateIsBeforeType(t *testing.T) {
 	genClientPos := bytes.Index(buf.Bytes(), []byte("+genclient"))
 	typePos := bytes.Index(buf.Bytes(), []byte("type MyKind"))
 	assert.Greater(t, typePos, genClientPos, "+genclient marker must appear before the type definition\n%s", output)
+}
+
+// pluginOptionsFromYAML parses a YAML fragment into the yaml.Node shape a
+// plugin would receive from config load. An empty src returns a zero node,
+// matching the "options omitted" case.
+func pluginOptionsFromYAML(t *testing.T, src string) yaml.Node {
+	t.Helper()
+	var node yaml.Node
+	if src == "" {
+		return node
+	}
+	require.NoError(t, yaml.Unmarshal([]byte(src), &node))
+	require.Equal(t, yaml.DocumentNode, node.Kind)
+	require.Len(t, node.Content, 1)
+	return *node.Content[0]
 }

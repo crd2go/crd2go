@@ -28,10 +28,16 @@ type GenClient struct {
 	nonNamespaced bool
 }
 
-func newGenClientPlugin(cfg config.Plugin) Plugin {
-	return &GenClient{
-		nonNamespaced: cfg.Options["nonNamespaced"] == "true",
+type genClientOpts struct {
+	NonNamespaced bool `yaml:"nonNamespaced"`
+}
+
+func newGenClientPlugin(cfg config.Plugin) (Plugin, error) {
+	var opts genClientOpts
+	if err := decodePluginOptions(cfg, &opts); err != nil {
+		return nil, err
 	}
+	return &GenClient{nonNamespaced: opts.NonNamespaced}, nil
 }
 
 func (*GenClient) Name() string {

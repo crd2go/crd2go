@@ -20,6 +20,8 @@ import (
 	"unicode"
 
 	"github.com/dave/jennifer/jen"
+
+	"github.com/crd2go/crd2go/pkg/config"
 )
 
 const (
@@ -27,6 +29,13 @@ const (
 )
 
 type GetConditions struct {
+}
+
+func newGetConditionsPlugin(cfg config.Plugin) (Plugin, error) {
+	if err := decodePluginOptions(cfg, &struct{}{}); err != nil {
+		return nil, err
+	}
+	return &GetConditions{}, nil
 }
 
 func (*GetConditions) Name() string {
