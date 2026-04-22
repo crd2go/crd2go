@@ -15,9 +15,11 @@
 package plugins
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/dave/jennifer/jen"
+	"gopkg.in/yaml.v3"
 
 	"github.com/crd2go/crd2go/internal/gotype"
 	"github.com/crd2go/crd2go/pkg/config"
@@ -34,13 +36,11 @@ type Plugin interface {
 	Annotate(f *jen.File, kind string) error
 }
 
-type PluginBuilderFunc func(config.Plugin) Plugin
+type PluginBuilderFunc func(config.Plugin) (Plugin, error)
 
 var codegenPlugins = map[string]PluginBuilderFunc{
-	GetConditionsPlugin: func(config.Plugin) Plugin {
-		return &GetConditions{}
-	},
-	GenClientPlugin: newGenClientPlugin,
+	GetConditionsPlugin: newGetConditionsPlugin,
+	GenClientPlugin:     newGenClientPlugin,
 }
 
 func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {
@@ -50,8 +50,30 @@ func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {
 		if !ok {
 			return nil, fmt.Errorf("%q is not a registered plugin", cfg.Name)
 		}
-		plugin := builder(cfg)
+		plugin, err := builder(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("plugin %q: %w", cfg.Name, err)
+		}
 		plugins = append(plugins, plugin)
 	}
 	return plugins, nil
+}
+
+// decodePluginOptions decodes cfg.Options into out using strict decoding,
+// so unknown fields produce an error. An empty options node is treated as
+// a no-op, leaving out at its zero value.
+func decodePluginOptions(cfg config.Plugin, out any) error {
+	if cfg.Options.IsZero() {
+		return nil
+	}
+	buf, err := yaml.Marshal(&cfg.Options)
+	if err != nil {
+		return fmt.Errorf("re-encode options: %w", err)
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(buf))
+	dec.KnownFields(true)
+	if err := dec.Decode(out); err != nil {
+		return fmt.Errorf("decode options: %w", err)
+	}
+	return nil
 }

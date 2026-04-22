@@ -17,16 +17,21 @@ package render
 
 import (
 	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/plugins"
 )
 
+// CRDRenderRequest carries everything RenderCRD needs for a single CRD,
+// including the pre-constructed plugin list. BuiltPlugins is populated once
+// up-front so hooks aren't re-decoding options for every CRD.
 type CRDRenderRequest struct {
 	gotype.Request
-	Filename string
-	Group    string
-	Version  string
-	Kind     string
-	Resource string
-	Type     *gotype.GoType
+	Filename     string
+	Group        string
+	Version      string
+	Kind         string
+	Resource     string
+	Type         *gotype.GoType
+	BuiltPlugins []plugins.Plugin
 }
 
 type CRD2GoRenderer interface {

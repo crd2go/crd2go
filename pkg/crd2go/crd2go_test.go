@@ -25,16 +25,28 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/dave/jennifer/jen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 
 	"github.com/crd2go/crd2go/internal/checkerr"
 	"github.com/crd2go/crd2go/internal/crd"
 	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/plugins"
 	"github.com/crd2go/crd2go/internal/testdata"
 	"github.com/crd2go/crd2go/k8s"
 	"github.com/crd2go/crd2go/pkg/config"
 )
+
+// pluginsFromYAML parses a YAML fragment like "- name: foo\n  options: {...}"
+// into a []config.Plugin, matching what LoadConfig would produce.
+func pluginsFromYAML(t *testing.T, src string) []config.Plugin {
+	t.Helper()
+	var plugins []config.Plugin
+	require.NoError(t, yaml.Unmarshal([]byte(src), &plugins))
+	return plugins
+}
 
 const (
 	expectedSources = 19
@@ -116,7 +128,9 @@ func TestRefs(t *testing.T) {
 			SkipList: disabledKinds,
 		},
 	}
-	_, err := GenerateStream(&req, in)
+	builtPlugins, err := Prepare(&req)
+	require.NoError(t, err)
+	_, err = GenerateStream(&req, builtPlugins, in)
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, buffers)
@@ -226,8 +240,11 @@ func TestGenerateWithGenClient(t *testing.T) {
 			wantGenClient: true,
 		},
 		{
-			name:              "gen-client nonNamespaced produces both markers",
-			plugins:           []config.Plugin{{Name: "gen-client", Options: map[string]string{"nonNamespaced": "true"}}},
+			name: "gen-client nonNamespaced produces both markers",
+			plugins: pluginsFromYAML(t, `
+- name: gen-client
+  options:
+    nonNamespaced: true`),
 			wantGenClient:     true,
 			wantNonNamespaced: true,
 		},
@@ -454,20 +471,6 @@ imports: []`,
 			},
 		},
 		{
-			name: "gen-client plugin with options",
-			input: `plugins:
-  - name: gen-client
-    options:
-      nonNamespaced: "true"`,
-			want: &config.Config{
-				CoreConfig: config.CoreConfig{
-					Plugins: []config.Plugin{
-						{Name: "gen-client", Options: map[string]string{"nonNamespaced": "true"}},
-					},
-				},
-			},
-		},
-		{
 			name:    "bad yaml",
 			input:   "this is not a good YAML config",
 			wantErr: "cannot unmarshal",
@@ -493,6 +496,35 @@ imports: []`,
 			}
 		})
 	}
+}
+
+// TestLoadConfigPluginOptions checks that plugin options survive the
+// YAML → CoreConfig → CodegenPlugins round trip and decode into the
+// plugin's typed options. Direct struct equality on yaml.Node is fragile
+// (line/column metadata), so this test validates the observable behaviour
+// of the loaded plugin rather than the raw config shape.
+func TestLoadConfigPluginOptions(t *testing.T) {
+	input := `plugins:
+  - name: gen-client
+    options:
+      nonNamespaced: true`
+
+	cfg, err := LoadConfig(bytes.NewBufferString(input))
+	require.NoError(t, err)
+	require.Len(t, cfg.Plugins, 1)
+	assert.Equal(t, "gen-client", cfg.Plugins[0].Name)
+
+	// The observable check: the plugin actually carries the nonNamespaced
+	// flag across the load boundary and emits the matching marker.
+	pluginList, err := plugins.CodegenPlugins(cfg.Plugins)
+	require.NoError(t, err)
+	require.Len(t, pluginList, 1)
+
+	f := jen.NewFile("v1")
+	require.NoError(t, pluginList[0].Annotate(f, "MyKind"))
+	var out bytes.Buffer
+	require.NoError(t, f.Render(&out))
+	assert.Contains(t, out.String(), "+genclient:nonNamespaced")
 }
 
 func TestCodeFileForCRDAtPath(t *testing.T) {

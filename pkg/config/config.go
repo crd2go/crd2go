@@ -17,6 +17,8 @@ package config
 
 import (
 	"io"
+
+	"gopkg.in/yaml.v3"
 )
 
 // CodeWriterFunc is a function type that takes a CRD and returns a writer for the generated code
@@ -56,10 +58,12 @@ type CoreConfig struct {
 	GroupVersion       string               `yaml:"-"`
 }
 
-// Plugin represents a named plugin code that can be optionally invoked
+// Plugin represents a named plugin code that can be optionally invoked.
+// Options holds the raw YAML node for plugin-specific options; each plugin
+// decodes it into its own typed struct at registration time.
 type Plugin struct {
-	Name    string            `yaml:"name"`
-	Options map[string]string `yaml:"options"`
+	Name    string    `yaml:"name"`
+	Options yaml.Node `yaml:"options"`
 }
 
 // DeepCopy controls whether deepcopy markers are emitted in the generated code.

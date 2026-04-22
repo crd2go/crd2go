@@ -55,9 +55,32 @@ Optional plugins extend the generated code on a per-CRD basis. Enable them in `c
 ```yaml
 plugins:
   - name: <plugin-name>
-    options:            # optional key/value pairs, plugin-specific
+    options:            # optional, plugin-specific; typed per plugin
       key: value
 ```
+
+#### Plugin options
+
+Plugin options are defined in YAML under each plugin:
+
+```yaml
+plugins:
+  - name: gen-client
+    options:
+      nonNamespaced: true
+```
+
+The configuration loader preserves the raw YAML for each plugin's options; it does not validate them. Plugins are constructed once up-front, as soon as code generation starts, and each plugin decodes and validates its own options at that point. Any error surfaces before CRD processing begins rather than partway through rendering.
+
+For plugins that define typed options:
+
+- Unknown fields are rejected
+- Field types must match exactly (e.g. `true`, not `"true"`)
+- Invalid or unexpected shapes will result in an error when plugins are initialized
+
+For plugins that do not accept options:
+
+- Providing any options will result in an error
 
 #### `get-conditions`
 
@@ -81,9 +104,9 @@ plugins:
 
 The following option is supported:
 
-| Option | Values | Default | Description |
+| Option | Type | Default | Description |
 |---|---|---|---|
-| `nonNamespaced` | `"true"` / `"false"` | `"false"` | Adds `+genclient:nonNamespaced` for cluster-scoped resources. |
+| `nonNamespaced` | bool | `false` | Adds `+genclient:nonNamespaced` for cluster-scoped resources. |
 
 Example for a cluster-scoped resource:
 
@@ -91,10 +114,10 @@ Example for a cluster-scoped resource:
 plugins:
   - name: gen-client
     options:
-      nonNamespaced: "true"
+      nonNamespaced: true
 ```
 
-With `nonNamespaced: "true"` the generated file will contain:
+With `nonNamespaced: true` the generated file will contain:
 
 ```go
 // +genclient

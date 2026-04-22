@@ -31,6 +31,7 @@ import (
 	"github.com/crd2go/crd2go/internal/crd/hooks"
 	"github.com/crd2go/crd2go/internal/fileinput"
 	"github.com/crd2go/crd2go/internal/gotype"
+	"github.com/crd2go/crd2go/internal/plugins"
 	"github.com/crd2go/crd2go/internal/render"
 	"github.com/crd2go/crd2go/pkg/config"
 )
@@ -109,9 +110,25 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	return nil
 }
 
-// Generate will write files using the CodeWriterFunc
+// Prepare constructs the plugin list once from req.Plugins. Any error decoding
+// plugin options surfaces here, before any CRD is parsed or rendered. Call
+// this after loading the config and before Generate or GenerateStream.
+func Prepare(req *gotype.Request) ([]plugins.Plugin, error) {
+	builtPlugins, err := plugins.CodegenPlugins(req.Plugins)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct plugins: %w", err)
+	}
+	return builtPlugins, nil
+}
+
+// Generate will write files using the CodeWriterFunc. It runs Prepare
+// internally, so callers don't need to construct plugins themselves.
 func Generate(req *gotype.Request, r io.Reader) error {
-	generatedGVRs, err := GenerateStream(req, r)
+	builtPlugins, err := Prepare(req)
+	if err != nil {
+		return err
+	}
+	generatedGVRs, err := GenerateStream(req, builtPlugins, r)
 	if err != nil {
 		return fmt.Errorf("failed to generate CRDs: %w", err)
 	}
@@ -134,10 +151,15 @@ func Generate(req *gotype.Request, r io.Reader) error {
 }
 
 // GenerateStream generates Go code from a stream of CRDs within a YAML reader.
-// It uses the provided CodeWriterFunc to write the generated code to the specified output.
-// The version parameter specifies the version of the CRD to generate code for.
-// The preloadedTypes parameter allows for preloading specific types to avoid name collisions.
-func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
+// It uses the provided CodeWriterFunc to write the generated code to the
+// specified output. The version parameter specifies the version of the CRD to
+// generate code for. The preloadedTypes parameter allows for preloading
+// specific types to avoid name collisions.
+//
+// builtPlugins must be produced by Prepare (or plugins.CodegenPlugins
+// directly). This function does not build plugins itself — do that up-front
+// so errors surface before CRD processing.
+func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Reader) ([]string, error) {
 	preloaded := []*gotype.GoType{}
 	for _, name := range req.Reserved {
 		preloaded = append(preloaded, gotype.NewOpaqueType(name))
@@ -147,7 +169,7 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 	}
 	req.TypeDict.AddAll(preloaded...)
 
-	renderRequests, err := computeRenderRequests(req, bufio.NewScanner(r))
+	renderRequests, err := computeRenderRequests(req, builtPlugins, bufio.NewScanner(r))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate CRDs code generation information: %w", err)
 	}
@@ -172,7 +194,7 @@ func GenerateStream(req *gotype.Request, r io.Reader) ([]string, error) {
 	return generatedGVRs, nil
 }
 
-func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
+func computeRenderRequests(req *gotype.Request, builtPlugins []plugins.Plugin, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
 	renderRequests := []render.CRDRenderRequest{}
 	group, version, err := selectGroupVersion(req)
 	if err != nil {
@@ -217,13 +239,14 @@ func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]rende
 				group, version, versionedCRD.Version.Name, crdSchema.Spec.Group)
 		}
 		renderReq := render.CRDRenderRequest{
-			Request:  *req,
-			Filename: crd.Kind2Filename(versionedCRD.Kind),
-			Group:    crdSchema.Spec.Group,
-			Version:  versionedCRD.Version.Name,
-			Kind:     versionedCRD.Kind,
-			Resource: crdSchema.Spec.Names.Plural,
-			Type:     goCRD,
+			Request:      *req,
+			Filename:     crd.Kind2Filename(versionedCRD.Kind),
+			Group:        crdSchema.Spec.Group,
+			Version:      versionedCRD.Version.Name,
+			Kind:         versionedCRD.Kind,
+			Resource:     crdSchema.Spec.Names.Plural,
+			Type:         goCRD,
+			BuiltPlugins: builtPlugins,
 		}
 		renderRequests = append(renderRequests, renderReq)
 	}
