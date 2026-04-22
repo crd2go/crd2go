@@ -59,7 +59,28 @@ plugins:
       key: value
 ```
 
-Option values are typed (booleans, strings, numbers — not stringly-typed), and unknown keys are rejected at config-load time.
+#### Plugin options
+
+Plugin options are defined in YAML under each plugin:
+
+```yaml
+plugins:
+  - name: gen-client
+    options:
+      nonNamespaced: true
+```
+
+Options are parsed and validated when plugins are constructed, not during initial config load. The configuration loader preserves the raw YAML, and each plugin is responsible for decoding and validating its own options.
+
+For plugins that define typed options:
+
+- Unknown fields are rejected
+- Field types must match exactly (e.g. `true`, not `"true"`)
+- Invalid or unexpected shapes will result in an error when plugins are initialized
+
+For plugins that do not accept options:
+
+- Providing any options will result in an error
 
 #### `get-conditions`
 
