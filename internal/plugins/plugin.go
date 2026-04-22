@@ -52,7 +52,7 @@ func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {
 		}
 		plugin, err := builder(cfg)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("plugin %q: %w", cfg.Name, err)
 		}
 		plugins = append(plugins, plugin)
 	}
@@ -68,12 +68,12 @@ func decodePluginOptions(cfg config.Plugin, out any) error {
 	}
 	buf, err := yaml.Marshal(&cfg.Options)
 	if err != nil {
-		return fmt.Errorf("plugin %q: re-encode options: %w", cfg.Name, err)
+		return fmt.Errorf("re-encode options: %w", err)
 	}
 	dec := yaml.NewDecoder(bytes.NewReader(buf))
 	dec.KnownFields(true)
 	if err := dec.Decode(out); err != nil {
-		return fmt.Errorf("plugin %q: decode options: %w", cfg.Name, err)
+		return fmt.Errorf("decode options: %w", err)
 	}
 	return nil
 }
