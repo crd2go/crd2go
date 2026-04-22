@@ -108,6 +108,7 @@ func TestGenerateSelectedGroupVersion(t *testing.T) {
 			Version:      crd.FirstVersion,
 			SkipList:     disabledKinds,
 			GroupVersion: "ea.generated.mongodb.com/v1",
+			Plugins:      []config.Plugin{{Name: "gen-deepcopy"}},
 		},
 	}
 	require.NoError(t, Generate(&req, in))
@@ -126,6 +127,7 @@ func TestRefs(t *testing.T) {
 		CoreConfig: config.CoreConfig{
 			Version:  crd.FirstVersion,
 			SkipList: disabledKinds,
+			Plugins:  []config.Plugin{{Name: "gen-deepcopy"}},
 		},
 	}
 	builtPlugins, err := Prepare(&req)
@@ -147,30 +149,41 @@ func TestGenerateWithDeepCopy(t *testing.T) {
 	for _, tc := range []struct {
 		name             string
 		dcConfig         config.DeepCopy
+		plugins          []config.Plugin
 		wantDocDCMarker  bool
 		wantCRDDCMarker  bool
 		wantControllerGe bool
 	}{
 		{
-			name:             "DC enabled by default (nil)",
+			// New semantics: no explicit opt-in means no deepcopy markers.
+			// The legacy default-on behavior is gone — plugin presence is the switch.
+			name:             "no config produces no markers",
 			dcConfig:         config.DeepCopy{},
-			wantDocDCMarker:  true,
-			wantCRDDCMarker:  true,
-			wantControllerGe: true,
+			wantDocDCMarker:  false,
+			wantCRDDCMarker:  false,
+			wantControllerGe: false,
 		},
 		{
-			name:             "DC explicitly true",
+			// Legacy field still honored (with deprecation warning to stderr).
+			name:             "legacy DeepCopy true produces markers",
 			dcConfig:         config.DeepCopy{Generate: boolPtr(true)},
 			wantDocDCMarker:  true,
 			wantCRDDCMarker:  true,
 			wantControllerGe: true,
 		},
 		{
-			name:             "DC explicitly false",
+			name:             "legacy DeepCopy false produces no markers",
 			dcConfig:         config.DeepCopy{Generate: boolPtr(false)},
 			wantDocDCMarker:  false,
 			wantCRDDCMarker:  false,
 			wantControllerGe: false,
+		},
+		{
+			name:             "gen-deepcopy plugin produces markers",
+			plugins:          []config.Plugin{{Name: "gen-deepcopy"}},
+			wantDocDCMarker:  true,
+			wantCRDDCMarker:  true,
+			wantControllerGe: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -184,6 +197,7 @@ func TestGenerateWithDeepCopy(t *testing.T) {
 					Version:  crd.FirstVersion,
 					SkipList: disabledKinds,
 					DeepCopy: tc.dcConfig,
+					Plugins:  tc.plugins,
 				},
 			}
 			require.NoError(t, Generate(&req, in))
@@ -304,28 +318,45 @@ func TestGenerateWithApplyConfiguration(t *testing.T) {
 	for _, tc := range []struct {
 		name                   string
 		acConfig               config.ApplyConfiguration
+		plugins                []config.Plugin
 		wantDocACMarker        bool
 		wantDocOutputPkg       string
 		wantSchemeGroupVersion bool
 	}{
 		{
-			name:                   "AC disabled by default (zero value)",
+			name:                   "no config produces no markers",
 			acConfig:               config.ApplyConfiguration{},
 			wantDocACMarker:        false,
 			wantSchemeGroupVersion: false,
 		},
 		{
-			name:                   "AC enabled without output package",
+			name:                   "legacy AC true produces markers",
 			acConfig:               config.ApplyConfiguration{Generate: true},
 			wantDocACMarker:        true,
 			wantSchemeGroupVersion: true,
 		},
 		{
-			name: "AC enabled with output package",
+			name: "legacy AC with output package",
 			acConfig: config.ApplyConfiguration{
 				Generate:      true,
 				OutputPackage: "../../applyconfiguration",
 			},
+			wantDocACMarker:        true,
+			wantDocOutputPkg:       "../../applyconfiguration",
+			wantSchemeGroupVersion: true,
+		},
+		{
+			name:                   "gen-applyconfiguration plugin produces markers",
+			plugins:                []config.Plugin{{Name: "gen-applyconfiguration"}},
+			wantDocACMarker:        true,
+			wantSchemeGroupVersion: true,
+		},
+		{
+			name: "gen-applyconfiguration plugin with outputPackage option",
+			plugins: pluginsFromYAML(t, `
+- name: gen-applyconfiguration
+  options:
+    outputPackage: ../../applyconfiguration`),
 			wantDocACMarker:        true,
 			wantDocOutputPkg:       "../../applyconfiguration",
 			wantSchemeGroupVersion: true,
@@ -342,6 +373,7 @@ func TestGenerateWithApplyConfiguration(t *testing.T) {
 					Version:            crd.FirstVersion,
 					SkipList:           disabledKinds,
 					ApplyConfiguration: tc.acConfig,
+					Plugins:            tc.plugins,
 				},
 			}
 			require.NoError(t, Generate(&req, in))
@@ -494,6 +526,45 @@ imports: []`,
 				require.Nil(t, cfg)
 				assert.ErrorContains(t, err, tc.wantErr)
 			}
+		})
+	}
+}
+
+func TestDeprecatedAndPluginConflict(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		cfg    config.CoreConfig
+		errSub string
+	}{
+		{
+			name: "deepCopy and gen-deepcopy plugin both set",
+			cfg: config.CoreConfig{
+				Version:  crd.FirstVersion,
+				DeepCopy: config.DeepCopy{Generate: boolPtr(true)},
+				Plugins:  []config.Plugin{{Name: "gen-deepcopy"}},
+			},
+			errSub: `sets both deprecated deepCopy.generate and the "gen-deepcopy" plugin`,
+		},
+		{
+			name: "applyConfiguration and gen-applyconfiguration plugin both set",
+			cfg: config.CoreConfig{
+				Version:            crd.FirstVersion,
+				ApplyConfiguration: config.ApplyConfiguration{Generate: true},
+				Plugins:            []config.Plugin{{Name: "gen-applyconfiguration"}},
+			},
+			errSub: `sets both deprecated applyConfiguration and the "gen-applyconfiguration" plugin`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			buffers := make(map[string]*bytes.Buffer)
+			req := gotype.Request{
+				CodeWriterFn: BufferForCRD(buffers),
+				TypeDict:     gotype.NewTypeDict(nil, preloadedTypes()),
+				CoreConfig:   tc.cfg,
+			}
+			err := Generate(&req, bytes.NewBuffer(testdata.CRDsYAML))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.errSub)
 		})
 	}
 }

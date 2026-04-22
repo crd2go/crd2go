@@ -30,17 +30,41 @@ type CodegenRequest struct {
 	File *jen.File
 }
 
+// Plugin is the full surface a codegen plugin exposes. Plugins contribute to
+// up to four distinct locations in the generated output, one per hook:
+//
+//   - Annotate: marker comments immediately before the root CRD type.
+//   - Process: additional Go code after the root CRD type definition.
+//   - DocAnnotate: header comments and body of doc.go.
+//   - SchemeVars: extra entries in the var block of groupversion_info.go.
+//
+// Most plugins only care about one or two of these. Embed BasePlugin to get
+// no-op defaults for the rest.
 type Plugin interface {
 	Name() string
-	Process(cgr *CodegenRequest) error
 	Annotate(f *jen.File, kind string) error
+	Process(cgr *CodegenRequest) error
+	DocAnnotate(f *jen.File, group, version string) error
+	SchemeVars(group, version string) ([]jen.Code, error)
 }
+
+// BasePlugin is an embeddable no-op implementation of every Plugin hook
+// except Name(), which must be provided by the concrete plugin since it is
+// always unique per plugin.
+type BasePlugin struct{}
+
+func (BasePlugin) Annotate(_ *jen.File, _ string) error       { return nil }
+func (BasePlugin) Process(_ *CodegenRequest) error            { return nil }
+func (BasePlugin) DocAnnotate(_ *jen.File, _, _ string) error { return nil }
+func (BasePlugin) SchemeVars(_, _ string) ([]jen.Code, error) { return nil, nil }
 
 type PluginBuilderFunc func(config.Plugin) (Plugin, error)
 
 var codegenPlugins = map[string]PluginBuilderFunc{
-	GetConditionsPlugin: newGetConditionsPlugin,
-	GenClientPlugin:     newGenClientPlugin,
+	GetConditionsPlugin:         newGetConditionsPlugin,
+	GenClientPlugin:             newGenClientPlugin,
+	GenDeepCopyPlugin:           newGenDeepCopyPlugin,
+	GenApplyConfigurationPlugin: newGenApplyConfigurationPlugin,
 }
 
 func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {

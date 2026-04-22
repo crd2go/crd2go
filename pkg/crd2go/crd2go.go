@@ -110,15 +110,86 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	return nil
 }
 
-// Prepare constructs the plugin list once from req.Plugins. Any error decoding
-// plugin options surfaces here, before any CRD is parsed or rendered. Call
-// this after loading the config and before Generate or GenerateStream.
+// Prepare normalizes deprecated config fields (emitting deprecation warnings
+// to stderr) and constructs the plugin list. Any error decoding plugin
+// options surfaces here, before any CRD is parsed or rendered. Call this
+// after loading the config and before Generate or GenerateStream.
 func Prepare(req *gotype.Request) ([]plugins.Plugin, error) {
+	if err := normalizeDeprecatedConfig(&req.CoreConfig); err != nil {
+		return nil, err
+	}
 	builtPlugins, err := plugins.CodegenPlugins(req.Plugins)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct plugins: %w", err)
 	}
 	return builtPlugins, nil
+}
+
+// normalizeDeprecatedConfig translates the legacy DeepCopy and
+// ApplyConfiguration fields into plugin entries and emits a deprecation
+// warning to stderr for each translated field. It errors if a legacy field
+// and its equivalent plugin are both set — half-migrated configs should fail
+// loudly rather than silently pick a winner. Idempotent: after translation
+// the legacy fields are zeroed, so subsequent calls are no-ops.
+func normalizeDeprecatedConfig(cfg *config.CoreConfig) error {
+	if cfg.DeepCopy.Generate != nil {
+		if hasPlugin(cfg.Plugins, plugins.GenDeepCopyPlugin) {
+			return fmt.Errorf("config sets both deprecated deepCopy.generate and the %q plugin; remove one", plugins.GenDeepCopyPlugin)
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: deepCopy.generate is deprecated; list the %q plugin under plugins instead\n", plugins.GenDeepCopyPlugin)
+		if *cfg.DeepCopy.Generate {
+			cfg.Plugins = append(cfg.Plugins, config.Plugin{Name: plugins.GenDeepCopyPlugin})
+		}
+		cfg.DeepCopy.Generate = nil
+	}
+
+	acSet := cfg.ApplyConfiguration.Generate || cfg.ApplyConfiguration.OutputPackage != ""
+	if acSet {
+		if hasPlugin(cfg.Plugins, plugins.GenApplyConfigurationPlugin) {
+			return fmt.Errorf("config sets both deprecated applyConfiguration and the %q plugin; remove one", plugins.GenApplyConfigurationPlugin)
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: applyConfiguration is deprecated; list the %q plugin under plugins instead\n", plugins.GenApplyConfigurationPlugin)
+		if cfg.ApplyConfiguration.Generate {
+			entry := config.Plugin{Name: plugins.GenApplyConfigurationPlugin}
+			if cfg.ApplyConfiguration.OutputPackage != "" {
+				opts, err := buildPluginOptions(map[string]any{"outputPackage": cfg.ApplyConfiguration.OutputPackage})
+				if err != nil {
+					return fmt.Errorf("translate applyConfiguration: %w", err)
+				}
+				entry.Options = opts
+			}
+			cfg.Plugins = append(cfg.Plugins, entry)
+		}
+		cfg.ApplyConfiguration = config.ApplyConfiguration{}
+	}
+
+	return nil
+}
+
+func hasPlugin(list []config.Plugin, name string) bool {
+	for _, p := range list {
+		if p.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// buildPluginOptions constructs a yaml.Node representing the given key-value
+// pairs in the shape a plugin builder expects (a MappingNode, not a document).
+func buildPluginOptions(opts map[string]any) (yaml.Node, error) {
+	buf, err := yaml.Marshal(opts)
+	if err != nil {
+		return yaml.Node{}, err
+	}
+	var node yaml.Node
+	if err := yaml.Unmarshal(buf, &node); err != nil {
+		return yaml.Node{}, err
+	}
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		return *node.Content[0], nil
+	}
+	return node, nil
 }
 
 // Generate will write files using the CodeWriterFunc. It runs Prepare
@@ -141,10 +212,10 @@ func Generate(req *gotype.Request, r io.Reader) error {
 	}
 	group := parts[0]
 	version := parts[1]
-	if err := render.Default.RenderDoc(req, group, version); err != nil {
+	if err := render.Default.RenderDoc(req, builtPlugins, group, version); err != nil {
 		return fmt.Errorf("failed to generate the doc.go file for group version '%s/%s': %w", group, version, err)
 	}
-	if err := render.Default.RenderSchema(req, group, version); err != nil {
+	if err := render.Default.RenderSchema(req, builtPlugins, group, version); err != nil {
 		return fmt.Errorf("failed to generate the schema.go file for group version '%s/%s': %w", group, version, err)
 	}
 	return nil

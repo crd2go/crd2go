@@ -42,11 +42,9 @@ Extra configuration settings:
 - *reserved* is an array of type names that are not to be used in code generation.
 - *renames* are key - value pairs that specify how each key typename should be renamed to the given value when generated.
 - *imports* associate a type name with an import path and alias, so that an existing Go type is used instead of further expanding a CRD defined type in the generated code.
-- *deepCopy* controls whether `+k8s:deepcopy-gen` markers are emitted in the generated code:
-  - *deepCopy.generate* (`true`/`false`, defaults to `true`). Set to `false` to omit deepcopy markers from `doc.go` and per-CRD type files.
-- *applyConfiguration* controls whether `+kubebuilder:ac` markers and the `SchemeGroupVersion` alias are emitted in the generated code:
-  - *applyConfiguration.generate* (`true`/`false`, defaults to `false`). When `true`, crd2go adds `+kubebuilder:ac:generate=true` to `doc.go` and a `SchemeGroupVersion` alias to `groupversion_info.go`.
-  - *applyConfiguration.outputPackage* sets the `+kubebuilder:ac:output:package` marker value.
+- *plugins* is an array that opts into extra output. See **Plugins** below — deepcopy and apply-configuration marker generation are now plugins (`gen-deepcopy`, `gen-applyconfiguration`).
+
+**Deprecated**: *deepCopy.generate* and *applyConfiguration* as top-level settings are deprecated; use the `gen-deepcopy` and `gen-applyconfiguration` plugins instead. The legacy fields still work but emit a warning to stderr. Setting a legacy field alongside its equivalent plugin is an error.
 
 ### Plugins
 
@@ -133,6 +131,32 @@ Without the option:
 // +kubebuilder:object:root=true
 type MyResource struct { ... }
 ```
+
+#### `gen-deepcopy`
+
+Emits the `+k8s:deepcopy-gen` markers that controller-gen consumes to produce `DeepCopy` methods. List the plugin to turn marker generation on; omit it to turn off.
+
+```yaml
+plugins:
+  - name: gen-deepcopy
+```
+
+No options. When listed, crd2go adds `+k8s:deepcopy-gen=package` to `doc.go` and `+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object` before each root kind type.
+
+#### `gen-applyconfiguration`
+
+Emits the `+kubebuilder:ac` markers and the `SchemeGroupVersion` alias that the generated apply-configuration code expects (k8s.io/code-generator convention).
+
+```yaml
+plugins:
+  - name: gen-applyconfiguration
+    options:
+      outputPackage: ../../applyconfiguration   # optional
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `outputPackage` | string | `""` | Value for the `+kubebuilder:ac:output:package` marker. When empty, the marker is omitted. |
 
 ### Type naming and schema evolution
 

@@ -52,21 +52,27 @@ imports:
 # plugins customize what extra Go code gets generated on top of the CRD types
 plugins:
   - name: get-conditions
+  # controls +k8s:deepcopy-gen markers emission
+  # The caller is responsible for running controller-gen separately to produce
+  # the actual deepcopy code.
+  - name: gen-deepcopy
+# controls +kubebuilder:ac markers and SchemeGroupVersion alias emission
+# The caller is responsible for running controller-gen separately to produce
+# the actual apply configuration code.
+#   - name: gen-applyconfiguration
+#     options:
+#      generate: true
+#      outputPackage: ../../applyconfiguration
+# controls +genclient markers emission
 #    - name: gen-client ## uncomment to enable gen-client plugin
 #      options:
 #        nonNamespaced: true
 
-# deepCopy controls whether +k8s:deepcopy-gen markers are emitted in the
-# generated code. Defaults to enabled (markers are emitted).
-# The caller is responsible for running controller-gen separately to produce
-# the actual deepcopy code.
-deepCopy:
-  generate: true
+# Deprecated: use gen-deepcopy plugin instead
+# deepCopy:
+#   generate: true
 
-# applyConfiguration controls whether +kubebuilder:ac markers and the
-# SchemeGroupVersion alias are emitted in the generated code.
-# The caller is responsible for running controller-gen separately to produce
-# the actual apply configuration code.
-applyConfiguration:
-  generate: false
-  # outputPackage: ../../applyconfiguration ## relative path for generated output
+# Deprecated: use gen-applyconfiguration plugin instead
+# applyConfiguration:
+#   generate: false
+#     outputPackage: ../../applyconfiguration ## relative path for generated output
