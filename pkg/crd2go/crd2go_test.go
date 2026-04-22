@@ -128,7 +128,9 @@ func TestRefs(t *testing.T) {
 			SkipList: disabledKinds,
 		},
 	}
-	_, err := GenerateStream(&req, in)
+	builtPlugins, err := Prepare(&req)
+	require.NoError(t, err)
+	_, err = GenerateStream(&req, builtPlugins, in)
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, buffers)

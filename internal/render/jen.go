@@ -122,11 +122,7 @@ func renderCRDListObject(f *jen.File, kind string) {
 // renderAnnotationPlugins runs all plugins' Annotate method before the type
 // definition, allowing them to add markers/comments above the root kind struct.
 func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
-	codeGenPlugins, err := plugins.CodegenPlugins(req.Plugins)
-	if err != nil {
-		return fmt.Errorf("failed to enumerate codegen plugins: %w", err)
-	}
-	for _, plugin := range codeGenPlugins {
+	for _, plugin := range req.BuiltPlugins {
 		if err := plugin.Annotate(f, req.Kind); err != nil {
 			return fmt.Errorf("failed to annotate with plugin %q: %w", plugin.Name(), err)
 		}
@@ -136,15 +132,11 @@ func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
 
 // renderCodegenPlugins appends code generation from optional plugins per CRD
 func renderCodegenPlugins(f *jen.File, req *CRDRenderRequest) error {
-	codeGenPlugins, err := plugins.CodegenPlugins(req.Plugins)
-	if err != nil {
-		return fmt.Errorf("failed to enumerate codegen plugins: %w", err)
-	}
 	pluginRequest := plugins.CodegenRequest{
 		File: f,
 		Type: req.Type,
 	}
-	for _, plugin := range codeGenPlugins {
+	for _, plugin := range req.BuiltPlugins {
 		if err := plugin.Process(&pluginRequest); err != nil {
 			return fmt.Errorf("failed to process plugin %q: %w", plugin.Name(), err)
 		}

@@ -70,7 +70,7 @@ plugins:
       nonNamespaced: true
 ```
 
-Options are parsed and validated when plugins are constructed, not during initial config load. The configuration loader preserves the raw YAML, and each plugin is responsible for decoding and validating its own options.
+The configuration loader preserves the raw YAML for each plugin's options; it does not validate them. Plugins are constructed once up-front, as soon as code generation starts, and each plugin decodes and validates its own options at that point. Any error surfaces before CRD processing begins rather than partway through rendering.
 
 For plugins that define typed options:
 
