@@ -63,7 +63,7 @@ func CodegenPlugins(configs []config.Plugin) ([]Plugin, error) {
 // so unknown fields produce an error. An empty options node is treated as
 // a no-op, leaving out at its zero value.
 func decodePluginOptions(cfg config.Plugin, out any) error {
-	if cfg.Options.Kind == 0 {
+	if cfg.Options.IsZero() {
 		return nil
 	}
 	buf, err := yaml.Marshal(&cfg.Options)
