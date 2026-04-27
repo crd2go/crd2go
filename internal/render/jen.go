@@ -54,11 +54,11 @@ func (jr JenRenderer) RenderSchema(req *gotype.Request, builtPlugins []plugins.P
 	return nil
 }
 
-func (jr JenRenderer) RenderCRD(req *CRDRenderRequest) error {
+func (jr JenRenderer) RenderCRD(req *CRDRenderRequest, builtPlugins []plugins.Plugin) error {
 	f := jen.NewFile(req.Version)
 	renderCRDFileHeader(f, req.Kind)
 
-	if err := renderAnnotationPlugins(f, req); err != nil {
+	if err := renderAnnotationPlugins(f, req.Kind, builtPlugins); err != nil {
 		return fmt.Errorf("failed to render annotation plugins: %w", err)
 	}
 	f.Comment("+kubebuilder:object:root=true")
@@ -68,7 +68,7 @@ func (jr JenRenderer) RenderCRD(req *CRDRenderRequest) error {
 		return fmt.Errorf("failed to generate CRD type for %q: %w", req.Kind, err)
 	}
 	renderCRDListObject(f, req.Kind)
-	if err := renderCodegenPlugins(f, req); err != nil {
+	if err := renderCodegenPlugins(f, req.Type, builtPlugins); err != nil {
 		return fmt.Errorf("failed to render plugins: %w", err)
 	}
 
@@ -118,9 +118,9 @@ func renderCRDListObject(f *jen.File, kind string) {
 
 // renderAnnotationPlugins runs all plugins' Annotate method before the type
 // definition, allowing them to add markers/comments above the root kind struct.
-func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
-	for _, plugin := range req.BuiltPlugins {
-		if err := plugin.Annotate(f, req.Kind); err != nil {
+func renderAnnotationPlugins(f *jen.File, kind string, builtPlugins []plugins.Plugin) error {
+	for _, plugin := range builtPlugins {
+		if err := plugin.Annotate(f, kind); err != nil {
 			return fmt.Errorf("failed to annotate with plugin %q: %w", plugin.Name(), err)
 		}
 	}
@@ -128,12 +128,12 @@ func renderAnnotationPlugins(f *jen.File, req *CRDRenderRequest) error {
 }
 
 // renderCodegenPlugins appends code generation from optional plugins per CRD
-func renderCodegenPlugins(f *jen.File, req *CRDRenderRequest) error {
+func renderCodegenPlugins(f *jen.File, t *gotype.GoType, builtPlugins []plugins.Plugin) error {
 	pluginRequest := plugins.CodegenRequest{
 		File: f,
-		Type: req.Type,
+		Type: t,
 	}
-	for _, plugin := range req.BuiltPlugins {
+	for _, plugin := range builtPlugins {
 		if err := plugin.Process(&pluginRequest); err != nil {
 			return fmt.Errorf("failed to process plugin %q: %w", plugin.Name(), err)
 		}

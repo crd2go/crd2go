@@ -20,18 +20,18 @@ import (
 	"github.com/crd2go/crd2go/internal/plugins"
 )
 
-// CRDRenderRequest carries everything RenderCRD needs for a single CRD,
-// including the pre-constructed plugin list. BuiltPlugins is populated once
-// up-front so hooks aren't re-decoding options for every CRD.
+// CRDRenderRequest carries everything RenderCRD needs for a single CRD.
+// The plugin list is passed to RenderCRD as a separate argument rather
+// than embedded here, matching RenderDoc/RenderSchema and avoiding two
+// sources of plugin state on the same request.
 type CRDRenderRequest struct {
 	gotype.Request
-	Filename     string
-	Group        string
-	Version      string
-	Kind         string
-	Resource     string
-	Type         *gotype.GoType
-	BuiltPlugins []plugins.Plugin
+	Filename string
+	Group    string
+	Version  string
+	Kind     string
+	Resource string
+	Type     *gotype.GoType
 }
 
 type CRD2GoRenderer interface {
@@ -41,8 +41,8 @@ type CRD2GoRenderer interface {
 	// RenderSchema generates the schema.go file from the request, version and group inputs
 	RenderSchema(req *gotype.Request, builtPlugins []plugins.Plugin, group, version string) error
 
-	// RenderCRD renders each of the CRD Go files form the rewuqest and versioned CRD
-	RenderCRD(req *CRDRenderRequest) error
+	// RenderCRD renders each of the CRD Go files from the request and versioned CRD
+	RenderCRD(req *CRDRenderRequest, builtPlugins []plugins.Plugin) error
 }
 
 var Default = JenRenderer{}

@@ -269,7 +269,7 @@ func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Rea
 	}
 	req.TypeDict.AddAll(preloaded...)
 
-	renderRequests, err := computeRenderRequests(req, builtPlugins, bufio.NewScanner(r))
+	renderRequests, err := computeRenderRequests(req, bufio.NewScanner(r))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate CRDs code generation information: %w", err)
 	}
@@ -284,7 +284,7 @@ func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Rea
 
 	generatedGVRs := []string{}
 	for _, renderReq := range renderRequests {
-		if err := render.Default.RenderCRD(&renderReq); err != nil {
+		if err := render.Default.RenderCRD(&renderReq, builtPlugins); err != nil {
 			return nil, fmt.Errorf("failed to generate CRD code: %w", err)
 		}
 		gvr := fmt.Sprintf("%s/%s/%s", renderReq.Group, renderReq.Version, renderReq.Resource)
@@ -294,7 +294,7 @@ func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Rea
 	return generatedGVRs, nil
 }
 
-func computeRenderRequests(req *gotype.Request, builtPlugins []plugins.Plugin, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
+func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
 	renderRequests := []render.CRDRenderRequest{}
 	group, version, err := selectGroupVersion(req)
 	if err != nil {
@@ -339,14 +339,13 @@ func computeRenderRequests(req *gotype.Request, builtPlugins []plugins.Plugin, s
 				group, version, versionedCRD.Version.Name, crdSchema.Spec.Group)
 		}
 		renderReq := render.CRDRenderRequest{
-			Request:      *req,
-			Filename:     crd.Kind2Filename(versionedCRD.Kind),
-			Group:        crdSchema.Spec.Group,
-			Version:      versionedCRD.Version.Name,
-			Kind:         versionedCRD.Kind,
-			Resource:     crdSchema.Spec.Names.Plural,
-			Type:         goCRD,
-			BuiltPlugins: builtPlugins,
+			Request:  *req,
+			Filename: crd.Kind2Filename(versionedCRD.Kind),
+			Group:    crdSchema.Spec.Group,
+			Version:  versionedCRD.Version.Name,
+			Kind:     versionedCRD.Kind,
+			Resource: crdSchema.Spec.Names.Plural,
+			Type:     goCRD,
 		}
 		renderRequests = append(renderRequests, renderReq)
 	}
