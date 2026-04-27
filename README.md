@@ -46,6 +46,8 @@ Extra configuration settings:
 
 **Deprecated**: *deepCopy.generate* and *applyConfiguration* as top-level settings are deprecated; use the `gen-deepcopy` and `gen-applyconfiguration` plugins instead. The legacy fields still work but emit a warning to stderr. Setting a legacy field alongside its equivalent plugin is an error.
 
+> **Breaking change — deepcopy default flipped to off.** Previous releases treated an unset `deepCopy.generate` as enabled, so an empty config still emitted `+k8s:deepcopy-gen` markers. Starting with this release, deepcopy markers are only emitted when the `gen-deepcopy` plugin is listed under `plugins` (or the deprecated `deepCopy.generate: true` is set, which is auto-translated). Configs that relied on the implicit default will silently stop generating deepcopy markers — add `gen-deepcopy` to the `plugins` list to restore the previous behavior.
+
 ### Plugins
 
 Optional plugins extend the generated code on a per-CRD basis. Enable them in `crd2go.yaml` under `plugins`:
