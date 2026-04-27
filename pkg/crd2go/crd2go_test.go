@@ -530,6 +530,57 @@ imports: []`,
 	}
 }
 
+func TestImplicitDeepCopyOffWarning(t *testing.T) {
+	const wantSubstr = "deepcopy markers will not be emitted"
+	for _, tc := range []struct {
+		name     string
+		cfg      config.CoreConfig
+		wantWarn bool
+	}{
+		{
+			name:     "neither legacy nor plugin set warns",
+			cfg:      config.CoreConfig{Version: crd.FirstVersion},
+			wantWarn: true,
+		},
+		{
+			name: "explicit deepCopy.generate false silences",
+			cfg: config.CoreConfig{
+				Version:  crd.FirstVersion,
+				DeepCopy: config.DeepCopy{Generate: boolPtr(false)},
+			},
+			wantWarn: false,
+		},
+		{
+			name: "explicit deepCopy.generate true silences",
+			cfg: config.CoreConfig{
+				Version:  crd.FirstVersion,
+				DeepCopy: config.DeepCopy{Generate: boolPtr(true)},
+			},
+			wantWarn: false,
+		},
+		{
+			name: "gen-deepcopy plugin silences",
+			cfg: config.CoreConfig{
+				Version: crd.FirstVersion,
+				Plugins: []config.Plugin{{Name: "gen-deepcopy"}},
+			},
+			wantWarn: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var warn bytes.Buffer
+			req := gotype.Request{CoreConfig: tc.cfg, Warn: &warn}
+			_, err := Prepare(&req)
+			require.NoError(t, err)
+			if tc.wantWarn {
+				assert.Contains(t, warn.String(), wantSubstr)
+			} else {
+				assert.NotContains(t, warn.String(), wantSubstr)
+			}
+		})
+	}
+}
+
 func TestDeprecatedAndPluginConflict(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

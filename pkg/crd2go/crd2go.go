@@ -135,18 +135,37 @@ func warnSink(req *gotype.Request) io.Writer {
 	return os.Stderr
 }
 
+// warnf writes a formatted warning to w and discards the Fprintf return —
+// errcheck flags the unchecked error otherwise, and there's nothing useful
+// a caller can do if writing a warning fails.
+func warnf(w io.Writer, format string, args ...any) {
+	_, _ = fmt.Fprintf(w, format, args...)
+}
+
 // normalizeDeprecatedConfig translates the legacy DeepCopy and
 // ApplyConfiguration fields into plugin entries and emits a deprecation
 // warning to warn for each translated field. It errors if a legacy field
 // and its equivalent plugin are both set — half-migrated configs should fail
 // loudly rather than silently pick a winner. Idempotent: after translation
 // the legacy fields are zeroed, so subsequent calls are no-ops.
+//
+// It also warns when neither the legacy deepCopy.generate field nor the
+// gen-deepcopy plugin is set: previous releases defaulted to enabled in
+// that case, so silence here is the silent-regression scenario. Setting
+// deepCopy.generate: false (or any value) silences the warning.
 func normalizeDeprecatedConfig(cfg *config.CoreConfig, warn io.Writer) error {
+	if cfg.DeepCopy.Generate == nil && !hasPlugin(cfg.Plugins, plugins.GenDeepCopyPlugin) {
+		warnf(warn,
+			"WARNING: deepcopy markers will not be emitted. Previous releases defaulted to enabled when deepCopy.generate was unset; "+
+				"list the %q plugin under plugins to restore that behavior, or set deepCopy.generate: false explicitly to silence this warning.\n",
+			plugins.GenDeepCopyPlugin)
+	}
+
 	if cfg.DeepCopy.Generate != nil {
 		if hasPlugin(cfg.Plugins, plugins.GenDeepCopyPlugin) {
 			return fmt.Errorf("config sets both deprecated deepCopy.generate and the %q plugin; remove one", plugins.GenDeepCopyPlugin)
 		}
-		fmt.Fprintf(warn, "WARNING: deepCopy.generate is deprecated; list the %q plugin under plugins instead\n", plugins.GenDeepCopyPlugin)
+		warnf(warn, "WARNING: deepCopy.generate is deprecated; list the %q plugin under plugins instead\n", plugins.GenDeepCopyPlugin)
 		if *cfg.DeepCopy.Generate {
 			cfg.Plugins = append(cfg.Plugins, config.Plugin{Name: plugins.GenDeepCopyPlugin})
 		}
@@ -158,7 +177,7 @@ func normalizeDeprecatedConfig(cfg *config.CoreConfig, warn io.Writer) error {
 		if hasPlugin(cfg.Plugins, plugins.GenApplyConfigurationPlugin) {
 			return fmt.Errorf("config sets both deprecated applyConfiguration and the %q plugin; remove one", plugins.GenApplyConfigurationPlugin)
 		}
-		fmt.Fprintf(warn, "WARNING: applyConfiguration is deprecated; list the %q plugin under plugins instead\n", plugins.GenApplyConfigurationPlugin)
+		warnf(warn, "WARNING: applyConfiguration is deprecated; list the %q plugin under plugins instead\n", plugins.GenApplyConfigurationPlugin)
 		if cfg.ApplyConfiguration.Generate {
 			entry := config.Plugin{Name: plugins.GenApplyConfigurationPlugin}
 			if cfg.ApplyConfiguration.OutputPackage != "" {
