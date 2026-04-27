@@ -17,6 +17,7 @@ package gotype
 
 import (
 	"fmt"
+	"io"
 	"slices"
 
 	"github.com/crd2go/crd2go/pkg/config"
@@ -35,11 +36,16 @@ type TypeDict struct {
 	generated map[string]bool
 }
 
-// Request holds the runtime information to handle a CRD generation request
+// Request holds the runtime information to handle a CRD generation request.
+//
+// Warn is the sink for non-fatal warnings (deprecations, migration hints).
+// When nil, callers should treat os.Stderr as the default — that's the
+// behavior the CLI relies on, and tests can substitute a bytes.Buffer.
 type Request struct {
 	config.CoreConfig
 	CodeWriterFn config.CodeWriterFunc
 	TypeDict     *TypeDict
+	Warn         io.Writer
 }
 
 // TypeDictOption is a functional option for configuring a TypeDict at construction time.
