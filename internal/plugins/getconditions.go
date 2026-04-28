@@ -29,6 +29,7 @@ const (
 )
 
 type GetConditions struct {
+	BasePlugin
 }
 
 func newGetConditionsPlugin(cfg config.Plugin) (Plugin, error) {
@@ -40,10 +41,6 @@ func newGetConditionsPlugin(cfg config.Plugin) (Plugin, error) {
 
 func (*GetConditions) Name() string {
 	return GetConditionsPlugin
-}
-
-func (*GetConditions) Annotate(_ *jen.File, _ string) error {
-	return nil
 }
 
 func (*GetConditions) Process(cr *CodegenRequest) error {

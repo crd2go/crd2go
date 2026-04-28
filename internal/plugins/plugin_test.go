@@ -24,6 +24,27 @@ import (
 	"github.com/crd2go/crd2go/pkg/config"
 )
 
+// TestNoOptionsPluginsRejectUnknownFields locks in the guarantee that
+// plugins which decode into &struct{}{} (gen-deepcopy, get-conditions)
+// surface an error for any provided options. decodePluginOptions uses
+// yaml.Decoder.KnownFields(true), so the empty target is not a no-op:
+// any key in options is unknown and rejected.
+func TestNoOptionsPluginsRejectUnknownFields(t *testing.T) {
+	for _, name := range []string{"gen-deepcopy", "get-conditions"} {
+		t.Run(name+" rejects unexpected options", func(t *testing.T) {
+			_, err := plugins.CodegenPlugins([]config.Plugin{
+				{Name: name, Options: pluginOptionsFromYAML(t, "foo: bar")},
+			})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "field foo not found")
+		})
+		t.Run(name+" accepts no options", func(t *testing.T) {
+			_, err := plugins.CodegenPlugins([]config.Plugin{{Name: name}})
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestCodegenPlugins(t *testing.T) {
 	tests := []struct {
 		title   string

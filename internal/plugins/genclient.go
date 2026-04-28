@@ -25,6 +25,7 @@ const (
 )
 
 type GenClient struct {
+	BasePlugin
 	nonNamespaced bool
 }
 
@@ -50,10 +51,5 @@ func (gc *GenClient) Annotate(f *jen.File, _ string) error {
 	if gc.nonNamespaced {
 		f.Comment("+genclient:nonNamespaced")
 	}
-	return nil
-}
-
-// Process is a no-op; gen-client only adds annotations, not post-type code.
-func (*GenClient) Process(_ *CodegenRequest) error {
 	return nil
 }

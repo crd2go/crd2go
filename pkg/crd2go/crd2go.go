@@ -110,15 +110,115 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	return nil
 }
 
-// Prepare constructs the plugin list once from req.Plugins. Any error decoding
-// plugin options surfaces here, before any CRD is parsed or rendered. Call
-// this after loading the config and before Generate or GenerateStream.
+// Prepare normalizes deprecated config fields (emitting deprecation
+// warnings to req.Warn, defaulting to os.Stderr when nil) and constructs
+// the plugin list. Any error decoding plugin options surfaces here,
+// before any CRD is parsed or rendered. Call this after loading the
+// config and before Generate or GenerateStream.
 func Prepare(req *gotype.Request) ([]plugins.Plugin, error) {
+	if err := normalizeDeprecatedConfig(&req.CoreConfig, warnSink(req)); err != nil {
+		return nil, err
+	}
 	builtPlugins, err := plugins.CodegenPlugins(req.Plugins)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct plugins: %w", err)
 	}
 	return builtPlugins, nil
+}
+
+// warnSink returns req.Warn or os.Stderr if unset. Centralizing the
+// fallback keeps callers from nil-checking before every Fprintf.
+func warnSink(req *gotype.Request) io.Writer {
+	if req.Warn != nil {
+		return req.Warn
+	}
+	return os.Stderr
+}
+
+// warnf writes a formatted warning to w and discards the Fprintf return —
+// errcheck flags the unchecked error otherwise, and there's nothing useful
+// a caller can do if writing a warning fails.
+func warnf(w io.Writer, format string, args ...any) {
+	_, _ = fmt.Fprintf(w, format, args...)
+}
+
+// normalizeDeprecatedConfig translates the legacy DeepCopy and
+// ApplyConfiguration fields into plugin entries and emits a deprecation
+// warning to warn for each translated field. It errors if a legacy field
+// and its equivalent plugin are both set — half-migrated configs should fail
+// loudly rather than silently pick a winner. Idempotent: after translation
+// the legacy fields are zeroed, so subsequent calls are no-ops.
+//
+// It also warns when neither the legacy deepCopy.generate field nor the
+// gen-deepcopy plugin is set: previous releases defaulted to enabled in
+// that case, so silence here is the silent-regression scenario. Setting
+// deepCopy.generate: false (or any value) silences the warning.
+func normalizeDeprecatedConfig(cfg *config.CoreConfig, warn io.Writer) error {
+	if cfg.DeepCopy.Generate == nil && !hasPlugin(cfg.Plugins, plugins.GenDeepCopyPlugin) {
+		warnf(warn,
+			"WARNING: deepcopy markers will not be emitted. Previous releases defaulted to enabled when deepCopy.generate was unset; "+
+				"list the %q plugin under plugins to restore that behavior, or set deepCopy.generate: false explicitly to silence this warning.\n",
+			plugins.GenDeepCopyPlugin)
+	}
+
+	if cfg.DeepCopy.Generate != nil {
+		if hasPlugin(cfg.Plugins, plugins.GenDeepCopyPlugin) {
+			return fmt.Errorf("config sets both deprecated deepCopy.generate and the %q plugin; remove one", plugins.GenDeepCopyPlugin)
+		}
+		warnf(warn, "WARNING: deepCopy.generate is deprecated; list the %q plugin under plugins instead\n", plugins.GenDeepCopyPlugin)
+		if *cfg.DeepCopy.Generate {
+			cfg.Plugins = append(cfg.Plugins, config.Plugin{Name: plugins.GenDeepCopyPlugin})
+		}
+		cfg.DeepCopy.Generate = nil
+	}
+
+	acSet := cfg.ApplyConfiguration.Generate || cfg.ApplyConfiguration.OutputPackage != ""
+	if acSet {
+		if hasPlugin(cfg.Plugins, plugins.GenApplyConfigurationPlugin) {
+			return fmt.Errorf("config sets both deprecated applyConfiguration and the %q plugin; remove one", plugins.GenApplyConfigurationPlugin)
+		}
+		warnf(warn, "WARNING: applyConfiguration is deprecated; list the %q plugin under plugins instead\n", plugins.GenApplyConfigurationPlugin)
+		if cfg.ApplyConfiguration.Generate {
+			entry := config.Plugin{Name: plugins.GenApplyConfigurationPlugin}
+			if cfg.ApplyConfiguration.OutputPackage != "" {
+				opts, err := buildPluginOptions(map[string]any{"outputPackage": cfg.ApplyConfiguration.OutputPackage})
+				if err != nil {
+					return fmt.Errorf("translate applyConfiguration: %w", err)
+				}
+				entry.Options = opts
+			}
+			cfg.Plugins = append(cfg.Plugins, entry)
+		}
+		cfg.ApplyConfiguration = config.ApplyConfiguration{}
+	}
+
+	return nil
+}
+
+func hasPlugin(list []config.Plugin, name string) bool {
+	for _, p := range list {
+		if p.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// buildPluginOptions constructs a yaml.Node representing the given key-value
+// pairs in the shape a plugin builder expects (a MappingNode, not a document).
+func buildPluginOptions(opts map[string]any) (yaml.Node, error) {
+	buf, err := yaml.Marshal(opts)
+	if err != nil {
+		return yaml.Node{}, err
+	}
+	var node yaml.Node
+	if err := yaml.Unmarshal(buf, &node); err != nil {
+		return yaml.Node{}, err
+	}
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		return *node.Content[0], nil
+	}
+	return node, nil
 }
 
 // Generate will write files using the CodeWriterFunc. It runs Prepare
@@ -141,10 +241,10 @@ func Generate(req *gotype.Request, r io.Reader) error {
 	}
 	group := parts[0]
 	version := parts[1]
-	if err := render.Default.RenderDoc(req, group, version); err != nil {
+	if err := render.Default.RenderDoc(req, builtPlugins, group, version); err != nil {
 		return fmt.Errorf("failed to generate the doc.go file for group version '%s/%s': %w", group, version, err)
 	}
-	if err := render.Default.RenderSchema(req, group, version); err != nil {
+	if err := render.Default.RenderSchema(req, builtPlugins, group, version); err != nil {
 		return fmt.Errorf("failed to generate the schema.go file for group version '%s/%s': %w", group, version, err)
 	}
 	return nil
@@ -169,7 +269,7 @@ func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Rea
 	}
 	req.TypeDict.AddAll(preloaded...)
 
-	renderRequests, err := computeRenderRequests(req, builtPlugins, bufio.NewScanner(r))
+	renderRequests, err := computeRenderRequests(req, bufio.NewScanner(r))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate CRDs code generation information: %w", err)
 	}
@@ -184,7 +284,7 @@ func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Rea
 
 	generatedGVRs := []string{}
 	for _, renderReq := range renderRequests {
-		if err := render.Default.RenderCRD(&renderReq); err != nil {
+		if err := render.Default.RenderCRD(&renderReq, builtPlugins); err != nil {
 			return nil, fmt.Errorf("failed to generate CRD code: %w", err)
 		}
 		gvr := fmt.Sprintf("%s/%s/%s", renderReq.Group, renderReq.Version, renderReq.Resource)
@@ -194,7 +294,7 @@ func GenerateStream(req *gotype.Request, builtPlugins []plugins.Plugin, r io.Rea
 	return generatedGVRs, nil
 }
 
-func computeRenderRequests(req *gotype.Request, builtPlugins []plugins.Plugin, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
+func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]render.CRDRenderRequest, error) {
 	renderRequests := []render.CRDRenderRequest{}
 	group, version, err := selectGroupVersion(req)
 	if err != nil {
@@ -239,14 +339,13 @@ func computeRenderRequests(req *gotype.Request, builtPlugins []plugins.Plugin, s
 				group, version, versionedCRD.Version.Name, crdSchema.Spec.Group)
 		}
 		renderReq := render.CRDRenderRequest{
-			Request:      *req,
-			Filename:     crd.Kind2Filename(versionedCRD.Kind),
-			Group:        crdSchema.Spec.Group,
-			Version:      versionedCRD.Version.Name,
-			Kind:         versionedCRD.Kind,
-			Resource:     crdSchema.Spec.Names.Plural,
-			Type:         goCRD,
-			BuiltPlugins: builtPlugins,
+			Request:  *req,
+			Filename: crd.Kind2Filename(versionedCRD.Kind),
+			Group:    crdSchema.Spec.Group,
+			Version:  versionedCRD.Version.Name,
+			Kind:     versionedCRD.Kind,
+			Resource: crdSchema.Spec.Names.Plural,
+			Type:     goCRD,
 		}
 		renderRequests = append(renderRequests, renderReq)
 	}
