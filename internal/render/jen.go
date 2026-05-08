@@ -200,10 +200,10 @@ func renderSchemeFile(req *gotype.Request, builtPlugins []plugins.Plugin, group,
 
 	wc, err := req.CodeWriterFn("groupversion_info.go", true)
 	if err != nil {
-		return fmt.Errorf("failed to prepare scheme.go for writing: %w", err)
+		return fmt.Errorf("failed to prepare groupversion_info.go for writing: %w", err)
 	}
 	if err := f.Render(wc); err != nil {
-		return fmt.Errorf("failed to write Go code to scheme.go: %w", err)
+		return fmt.Errorf("failed to write Go code to groupversion_info.go: %w", err)
 	}
 	return nil
 }
