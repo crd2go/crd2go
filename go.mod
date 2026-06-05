@@ -1,6 +1,6 @@
 module github.com/crd2go/crd2go
 
-go 1.26.1
+go 1.26.4
 
 require (
 	github.com/dave/jennifer v1.7.1
