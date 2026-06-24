@@ -20,7 +20,7 @@ jobs:
         go-version: '1.25'
 
     - name: Install devbox
-      uses: jetify-com/devbox-install-action@v0.12.0
+      uses: jetify-com/devbox-install-action@v0.15.0
 
     - name: CI checks
       env:
