@@ -3,6 +3,7 @@
   "packages": [
     "git@latest",
     "go@latest",
+    "govulncheck@latest",
     "kubernetes-controller-tools@latest"
   ],
   "shell": {

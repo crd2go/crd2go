@@ -120,6 +120,7 @@ require (
 	github.com/jgautheron/goconst v1.8.2 // indirect
 	github.com/jingyugao/rowserrcheck v1.1.1 // indirect
 	github.com/jjti/go-spancheck v0.6.5 // indirect
+	github.com/josvazg/gobump v0.0.0-20260608144803-67f46bc53ed3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/julz/importas v0.2.0 // indirect
 	github.com/karamaru-alpha/copyloopvar v1.2.1 // indirect
@@ -251,6 +252,7 @@ tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/google/addlicense
 	github.com/google/go-licenses/v2
+	github.com/josvazg/gobump
 	github.com/magefile/mage
 	golang.org/x/vuln/cmd/govulncheck
 )
