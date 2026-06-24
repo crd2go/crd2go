@@ -125,6 +125,54 @@
         }
       }
     },
+    "govulncheck@latest": {
+      "last_modified": "2026-05-21T08:15:18Z",
+      "resolved": "github:NixOS/nixpkgs/4a29d733e8a7d5b824c3d8c958a946a9867b3eb2#govulncheck",
+      "source": "devbox-search",
+      "version": "1.3.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/a1yrahybicy7691paac2872as79xcyj5-govulncheck-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/a1yrahybicy7691paac2872as79xcyj5-govulncheck-1.3.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/dd8mic2zi558dnn0chjxw5fs5lyvnx7b-govulncheck-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/dd8mic2zi558dnn0chjxw5fs5lyvnx7b-govulncheck-1.3.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/m3nl892r0kd7js0nqds08n3573lypcbs-govulncheck-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/m3nl892r0kd7js0nqds08n3573lypcbs-govulncheck-1.3.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/4cdlv9rqvri0dw2zcy4cc1ykhh2y0qr8-govulncheck-1.3.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/4cdlv9rqvri0dw2zcy4cc1ykhh2y0qr8-govulncheck-1.3.0"
+        }
+      }
+    },
     "kubernetes-controller-tools@latest": {
       "last_modified": "2026-03-21T07:29:51Z",
       "resolved": "github:NixOS/nixpkgs/09061f748ee21f68a089cd5d91ec1859cd93d0be#kubernetes-controller-tools",

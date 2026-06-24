@@ -27,8 +27,13 @@ import (
 
 // CI runs all linting and validation checks.
 func CI() {
-	mg.Deps(Build, CRD2Go, UnitTests, Addlicense, Checklicense, CheckGCI, Lint, Govulncheck)
+	mg.Deps(GoBump, Build, CRD2Go, UnitTests, Addlicense, Checklicense, CheckGCI, Lint, Govulncheck)
 	fmt.Println("✅ CI PASSED all checks")
+}
+
+// GoBump updates the Go version as needed
+func GoBump() error {
+	return wrapRun("🧪 gobump", "go", "tool", "gobump", "./...")
 }
 
 // Build checks all executable build properly
