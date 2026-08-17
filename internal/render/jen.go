@@ -26,6 +26,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/crd2go/crd2go/internal/checkerr"
+	"github.com/crd2go/crd2go/internal/crd"
 	"github.com/crd2go/crd2go/internal/gotype"
 	"github.com/crd2go/crd2go/internal/plugins"
 )
@@ -151,12 +152,13 @@ func renderDocFile(req *gotype.Request, builtPlugins []plugins.Plugin, group, ve
 	}
 	f.HeaderComment(fmt.Sprintf("+groupName=%s", group))
 
-	wc, err := req.CodeWriterFn("doc.go", false)
+	name := crd.Filename("doc", req.FileNameFormat)
+	wc, err := req.CodeWriterFn(name, false)
 	if err != nil {
-		return fmt.Errorf("failed to prepare doc.go for writing: %w", err)
+		return fmt.Errorf("failed to prepare %s for writing: %w", name, err)
 	}
 	if err := f.Render(wc); err != nil {
-		return fmt.Errorf("failed to write Go code to doc.go: %w", err)
+		return fmt.Errorf("failed to write Go code to %s: %w", name, err)
 	}
 	return nil
 }
@@ -198,12 +200,13 @@ func renderSchemeFile(req *gotype.Request, builtPlugins []plugins.Plugin, group,
 
 	f.Var().Defs(varDefs...)
 
-	wc, err := req.CodeWriterFn("groupversion_info.go", true)
+	name := crd.Filename("groupversion_info", req.FileNameFormat)
+	wc, err := req.CodeWriterFn(name, true)
 	if err != nil {
-		return fmt.Errorf("failed to prepare groupversion_info.go for writing: %w", err)
+		return fmt.Errorf("failed to prepare %s for writing: %w", name, err)
 	}
 	if err := f.Render(wc); err != nil {
-		return fmt.Errorf("failed to write Go code to groupversion_info.go: %w", err)
+		return fmt.Errorf("failed to write Go code to %s: %w", name, err)
 	}
 	return nil
 }

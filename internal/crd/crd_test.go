@@ -413,3 +413,8 @@ func CrossReference() *gotype.GoType {
 func LocalReference() *gotype.GoType {
 	return gotype.MustTypeFrom(reflect.TypeOf(k8s.LocalReference{}))
 }
+
+func TestKind2Filename(t *testing.T) {
+	assert.Equal(t, "myapiresource.go", crd.Kind2Filename("MyAPIResource", ""))
+	assert.Equal(t, "myapiresource_types.go", crd.Kind2Filename("MyAPIResource", "%s_types"))
+}
