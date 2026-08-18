@@ -69,8 +69,15 @@ func FromOpenAPIType(td *gotype.TypeDict, hooks []OpenAPI2GoHook, crdType *CRDTy
 	return nil, fmt.Errorf("unsupported Open API type %q", crdType.Name)
 }
 
-func Kind2Filename(kind string) string {
-	return fmt.Sprintf("%s.go", strings.ToLower(kind))
+func Filename(base, format string) string {
+	if format == "" {
+		format = "%s"
+	}
+	return fmt.Sprintf(format, base) + ".go"
+}
+
+func Kind2Filename(kind, format string) string {
+	return Filename(strings.ToLower(kind), format)
 }
 
 func IsPrimitive(crdType *CRDType) bool {

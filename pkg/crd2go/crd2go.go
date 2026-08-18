@@ -94,6 +94,15 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 		}
 		opts = append(opts, gotype.WithExistingNames(existing))
 	}
+	switch fileNameFormat := cfg.FileNameFormat; {
+	case fileNameFormat == "":
+	case strings.Contains(fileNameFormat, "%s"):
+	default:
+		return fmt.Errorf(
+			"when set, fileNameFormat %q must contain %%s to generate a distinct file for each kind",
+			fileNameFormat,
+		)
+	}
 	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(), opts...)
 	in, err := os.Open(cfg.Input)
 	if err != nil {
@@ -340,7 +349,7 @@ func computeRenderRequests(req *gotype.Request, scanner *bufio.Scanner) ([]rende
 		}
 		renderReq := render.CRDRenderRequest{
 			Request:  *req,
-			Filename: crd.Kind2Filename(versionedCRD.Kind),
+			Filename: crd.Kind2Filename(versionedCRD.Kind, req.FileNameFormat),
 			Group:    crdSchema.Spec.Group,
 			Version:  versionedCRD.Version.Name,
 			Kind:     versionedCRD.Kind,

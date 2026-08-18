@@ -55,6 +55,7 @@ type CoreConfig struct {
 	Plugins            []Plugin             `yaml:"plugins"`
 	DeepCopy           DeepCopy             `yaml:"deepCopy"`
 	ApplyConfiguration ApplyConfiguration   `yaml:"applyConfiguration"`
+	FileNameFormat     string               `yaml:"fileNameFormat"`
 	GroupVersion       string               `yaml:"-"`
 }
 
