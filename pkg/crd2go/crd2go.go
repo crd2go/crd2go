@@ -99,7 +99,7 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 	case strings.Contains(fileNameFormat, "%s"):
 	default:
 		return fmt.Errorf(
-			"fileNameFormat %q must contain %%s to generate a distinct file for each kind",
+			"when set, fileNameFormat %q must contain %%s to generate a distinct file for each kind",
 			fileNameFormat,
 		)
 	}
