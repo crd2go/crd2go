@@ -46,6 +46,7 @@ Extra configuration settings:
 
 ```yaml
 fileNameFormat: "%s_types"   #  filename output becomes mycrd_types.go, doc_types.go and groupversion_info_types.go
+```
 
 **Deprecated**: *deepCopy.generate* and *applyConfiguration* as top-level settings are deprecated; use the `gen-deepcopy` and `gen-applyconfiguration` plugins instead. The legacy fields still work but emit a warning to stderr. Setting a legacy field alongside its equivalent plugin is an error.
 
