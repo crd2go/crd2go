@@ -99,15 +99,13 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 		return nil
 	}
 
-	if strings.Contains(fileNameFormat, "%s") {
-		return nil
-	}
-
-	return fmt.Errorf(
-		"fileNameFormat %q must contain %%s to generate a distinct file for each kind",
-		fileNameFormat,
-	)
-	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(), opts...)
+	if !strings.Contains(fileNameFormat, "%s") {
+		return fmt.Errorf(
+		  "fileNameFormat %q must contain %%s to generate a distinct file for each kind",
+		  fileNameFormat,
+	    )
+	} 
+td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(), opts...)
 	in, err := os.Open(cfg.Input)
 	if err != nil {
 		return fmt.Errorf("failed to open input file %s: %w", cfg.Input, err)
