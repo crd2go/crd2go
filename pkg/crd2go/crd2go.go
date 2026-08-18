@@ -94,18 +94,16 @@ func GenerateToDir(cfg *config.Config, forceRenames bool) error {
 		}
 		opts = append(opts, gotype.WithExistingNames(existing))
 	}
-	fileNameFormat := cfg.FileNameFormat
-	if fileNameFormat == "" {
-		return nil
-	}
-
-	if !strings.Contains(fileNameFormat, "%s") {
+	switch fileNameFormat := cfg.FileNameFormat; {
+	case fileNameFormat == "":
+	case strings.Contains(fileNameFormat, "%s"):
+	default:
 		return fmt.Errorf(
-		  "fileNameFormat %q must contain %%s to generate a distinct file for each kind",
-		  fileNameFormat,
-	    )
-	} 
-td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(), opts...)
+			"fileNameFormat %q must contain %%s to generate a distinct file for each kind",
+			fileNameFormat,
+		)
+	}
+	td := gotype.NewTypeDict(cfg.Renames, gotype.KnownTypes(), opts...)
 	in, err := os.Open(cfg.Input)
 	if err != nil {
 		return fmt.Errorf("failed to open input file %s: %w", cfg.Input, err)
