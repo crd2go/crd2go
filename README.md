@@ -42,7 +42,12 @@ Extra configuration settings:
 - *reserved* is an array of type names that are not to be used in code generation.
 - *renames* are key - value pairs that specify how each key typename should be renamed to the given value when generated.
 - *imports* associate a type name with an import path and alias, so that an existing Go type is used instead of further expanding a CRD defined type in the generated code.
-- *fileNameFormat* used to name the generated files. The .go extension is always appended.
+- *fileNameFormat* used to name the generated files. `%s` is replaced by the lowercased Kind and the .go extension is always appended. When set, the format must contain `%s`, otherwise all Kinds would target the same file. When unset, files are named after the Kind alone:
+
+```yaml
+fileNameFormat: "%s_types"   #  filename output becomes mycrd_types.go, doc_types.go and groupversion_info_types.go
+fileNameFormat: "%s_generated"   #  filename output becomes mycrd_generated.go, doc_generated.go and groupversion_info_generated.go
+```
 - *plugins* is an array that opts into extra output. See **Plugins** below — deepcopy and apply-configuration marker generation are now plugins (`gen-deepcopy`, `gen-applyconfiguration`).
 
 **Deprecated**: *deepCopy.generate* and *applyConfiguration* as top-level settings are deprecated; use the `gen-deepcopy` and `gen-applyconfiguration` plugins instead. The legacy fields still work but emit a warning to stderr. Setting a legacy field alongside its equivalent plugin is an error.
