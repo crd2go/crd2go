@@ -19,9 +19,7 @@ import (
 	"path"
 	"sort"
 	"strings"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"unicode"
 
 	"github.com/crd2go/crd2go/pkg/config"
 )
@@ -152,11 +150,16 @@ func orderFieldsByName(fields []*GoField) []*GoField {
 	return fields
 }
 
+var replacer = strings.NewReplacer(".", "_", "-", "_")
+
 // title capitalizes the first letter of a string and returns it using Go cases library
 func title(s string) string {
+	s = strings.TrimLeft(replacer.Replace(s), "_")
 	if s == "" {
 		return ""
 	}
-	s = strings.TrimLeft(s, "_") // remove leading underscores
-	return cases.Upper(language.English).String(s[0:1]) + s[1:]
+
+	runes := []rune(s)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }
