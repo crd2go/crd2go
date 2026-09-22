@@ -546,3 +546,79 @@ func TestExistingNameConflictError_Error(t *testing.T) {
 		})
 	}
 }
+
+func TestTitle(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "empty string",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "simple lowercase",
+			input: "hello",
+			want:  "Hello",
+		},
+		{
+			name:  "already titled",
+			input: "Hello",
+			want:  "Hello",
+		},
+		{
+			name:  "leading underscores stripped",
+			input: "_foo",
+			want:  "Foo",
+		},
+		{
+			name:  "multiple leading underscores",
+			input: "___foo",
+			want:  "Foo",
+		},
+		{
+			name:  "dots replaced with underscores",
+			input: "my.type",
+			want:  "My_type",
+		},
+		{
+			name:  "hyphens replaced with underscores",
+			input: "my-type",
+			want:  "My_type",
+		},
+		{
+			name:  "only special chars yields empty",
+			input: "._",
+			want:  "",
+		},
+		{
+			name:  "unicode multi-byte first character",
+			input: "ñoño",
+			want:  "Ñoño",
+		},
+		{
+			name:  "single lowercase char",
+			input: "a",
+			want:  "A",
+		},
+		{
+			name:  "leading dot gives valid identifier start",
+			input: ".name",
+			want:  "Name",
+		},
+		{
+			name:  "versions are fixed as Go compatible identifiers",
+			input: "1.2.3",
+			want:  "1_2_3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := title(tt.input)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
