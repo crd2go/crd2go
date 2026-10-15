@@ -10,7 +10,8 @@
     "init_hook": [
       "echo 'Welcome to devbox!' > /dev/null",
       "alias gofmt-gci='gci write --skip-generated -s standard -s default -s localmodule .'",
-      "alias mage='go tool mage'"
+      "alias mage='go tool mage'",
+      "export PATH=\"$(GOTOOLCHAIN=auto go env GOROOT)/bin:$PATH\""
     ],
     "scripts": {
       "test": [
